@@ -121,7 +121,7 @@ def receiver(sock):
                 res = " ".join(m[1:-1])
                 print()
                 print(f"{res}")
-            elif m[0] == "END":
+            elif m[0] == "END":  # after server sends this message, it performs the unwrap ad closes its socket
                 print()
                 print("<connection closing>")
                 flag = False
@@ -175,12 +175,12 @@ try:
             except OSError:
                 print()
                 print("<program ended>")
-                s.close()
+                s.unwrap().close()
                 exit()
             except KeyboardInterrupt:
                 print()
                 print("<quiting>")
-                s.close()
+                s.unwrap().close()
                 exit()
 except ConnectionRefusedError:
     print("<server not online>")

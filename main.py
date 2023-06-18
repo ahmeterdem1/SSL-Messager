@@ -118,7 +118,17 @@ def handler(con, ip, port, user):
             elif mes[0] == "END":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
                 try:
-                    object_list[user].close()
+                    object_list[user].unwrap().close()
+                except:
+                    pass
+                object_list.pop(user)
+                conn_list.pop(user)
+                print(f"<{user} left>")
+                break
+            else:
+                object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
+                try:
+                    object_list[user].unwrap().close()
                 except:
                     pass
                 object_list.pop(user)
@@ -127,7 +137,7 @@ def handler(con, ip, port, user):
                 break
     except ConnectionResetError:
         try:
-            object_list[user].close()
+            object_list[user].close()  #this being reached means client has closed down its socket, therefore no unwrap
         except:
             pass
         object_list.pop(user)
@@ -135,7 +145,7 @@ def handler(con, ip, port, user):
         print(f"<{user} left>")
     except ValueError:
         try:
-            object_list[user].close()
+            object_list[user].close()  # same as above
         except:
             pass
         object_list.pop(user)
@@ -144,7 +154,7 @@ def handler(con, ip, port, user):
     except OSError:
         for k, v in object_list.items():
             try:
-                v.close()
+                v.close()  # same as above
             except:
                 pass
         print("<server closing>")
@@ -155,10 +165,10 @@ def check():
         time.sleep(60)
         for k, v in object_list.items():
             try:
-                v.write(bytes("CHECK", "utf-8"))
+                v.write(bytes("CHECK \r\n", "utf-8"))
             except:
                 try:
-                    v.close()
+                    v.close()  # there is no unwrap here because this being reached means client has closed down its socket
                 except:
                     pass
                 object_list.pop(k)
@@ -206,7 +216,8 @@ try:
 except:
     for k, v in object_list.items():
         try:
-            v.close()
+            v.close()  # no unwrap here because there can be many reasons for this code to run
+                       # we are better off by just closing them down
         except:
             pass
 
