@@ -9,13 +9,13 @@ flag = True
 check = True
 target = 0
 
-def hash(a: str):  #Some 'interpretation' of md5 hash function that I have created.
-    temp = ""      #Hash will be used to order user data, then apply binary search to find the relevant data
-    for k in a:    #So it is not completely useless. I just wanted to turn this task into a more useful exercise for me.
+def hash(a: str):
+    temp = ""
+    for k in a:
         temp += str(bin(ord(k)))
-    temp = temp.replace("b", "")  #gets 8 bit ascii numbers in a string, has the reduced net length of the message
-    length = bin(len(a))  #LENGTH IN BINARY
-    length = str(length.replace("0b", ""))  #deletes the first '0b' from the string
+    temp = temp.replace("b", "")
+    length = bin(len(a))
+    length = str(length.replace("0b", ""))
     length_of_length = len(length)
     padding = 64 - length_of_length
     if len(temp) < 512:
@@ -23,21 +23,21 @@ def hash(a: str):  #Some 'interpretation' of md5 hash function that I have creat
     else:
         remainder = len(temp) % 512
     temp += "1"
-    temp += "0" * (remainder - 1)  # temp is prepared without the length part
+    temp += "0" * (remainder - 1)
     temp += "0" * padding
-    temp += length  # now it is fully prepared with all the padding
+    temp += length
 
-    J = 0x67425301  #copied these values from geeksforgeeks
+    J = 0x67425301
     K = 0xEDFCBA45
     L = 0x98CBADFE
     M = 0x13DCE476
 
     def F(K, L, M, J):
         L += M
-        result = (K and L) or (not K and M)  #These definitions of the variable result are from geeksforgeeks too.
-        L += result                         #All the other parts are just my interpretation of the explanation of the algorithm.
-        L = L << 1          #Apparently what makes hashes 'random' looking is bit-shifting. I discovered that by creating lots of
-        return L % (pow(2, 32))  #not working version of md5. When I added the bit shifting that I had been omitting, everything became much more clearer.
+        result = (K and L) or (not K and M)
+        L += result
+        L = L << 1
+        return L % (pow(2, 32))
 
     def G(K, L, M, J):
         result = (K and L) or (L and not M)
@@ -62,7 +62,7 @@ def hash(a: str):  #Some 'interpretation' of md5 hash function that I have creat
     l = 0
     for k in range(0, 16):
         message = ""
-        for m in range(l, l + 32):  # prepares the message
+        for m in range(l, l + 32):
             message += temp[m]
         l += 32
         message = int(message, 2)
@@ -72,7 +72,7 @@ def hash(a: str):  #Some 'interpretation' of md5 hash function that I have creat
     l = 0
     for k in range(0, 16):
         message = ""
-        for m in range(l, l + 32):  # prepares the message
+        for m in range(l, l + 32):
             message += temp[m]
         l += 32
         message = int(message, 2)
@@ -82,7 +82,7 @@ def hash(a: str):  #Some 'interpretation' of md5 hash function that I have creat
     l = 0
     for k in range(0, 16):
         message = ""
-        for m in range(l, l + 32):  # prepares the message
+        for m in range(l, l + 32):
             message += temp[m]
         l += 32
         message = int(message, 2)
@@ -92,7 +92,7 @@ def hash(a: str):  #Some 'interpretation' of md5 hash function that I have creat
     l = 0
     for k in range(0, 16):
         message = ""
-        for m in range(l, l + 32):  # prepares the message
+        for m in range(l, l + 32):
             message += temp[m]
         l += 32
         message = int(message, 2)
@@ -136,7 +136,7 @@ def receiver(sock):
             break
 
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-context.load_cert_chain("certc.pem", "certc.pem")
+context.load_cert_chain("../certc.pem", "../certc.pem")
 context.check_hostname = False
 context.verify_mode &= ~ssl.CERT_REQUIRED
 
