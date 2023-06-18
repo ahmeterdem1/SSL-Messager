@@ -3,12 +3,14 @@ import ssl
 import threading
 import time
 import sys
+import signal
+import os
 
 address = ("192.168.1.26", 18443)
 flag = True
 check = True
 target = 0
-
+thread = 0
 def hash(a: str):
     temp = ""
     for k in a:
@@ -104,7 +106,8 @@ def hash(a: str):
     return int(end)
 
 def receiver(sock):
-    global flag
+    global flag, thread
+    thread = threading.get_ident()
     while True:
         try:
             m = sock.read(4096)
@@ -175,14 +178,25 @@ try:
             except OSError:
                 print()
                 print("<program ended>")
-                s.unwrap().close()
-                exit()
+                flag = False
+                if os.name != "nt":
+                    try:
+                        signal.pthread_kill(thread, signal.SIGKILL)
+                    except:
+                        pass
+                s.close()
             except KeyboardInterrupt:
                 print()
                 print("<quiting>")
-                s.unwrap().close()
-                exit()
+                flag = False
+                if os.name != "nt":
+                    try:
+                        signal.pthread_kill(thread, signal.SIGKILL)
+                    except:
+                        pass
+                s.close()
+
 except ConnectionRefusedError:
     print("<server not online>")
-    exit()
+    sys.exit()
 

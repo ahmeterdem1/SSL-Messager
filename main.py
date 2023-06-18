@@ -126,8 +126,8 @@ def handler(con, ip, port, user):
                 print(f"<{user} left>")
                 break
             else:
-                object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
                 try:
+                    object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
                     object_list[user].unwrap().close()
                 except:
                     pass
@@ -214,12 +214,12 @@ try:
                         object_list[mes[1]] = conn
                         conn_list[mes[1]].start()
 except:
-    for k, v in object_list.items():
-        try:
+    try:
+        for k, v in object_list.items():
             v.close()  # no unwrap here because there can be many reasons for this code to run
                        # we are better off by just closing them down
-        except:
-            pass
+    except:
+        pass
 
 
 
