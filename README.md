@@ -54,7 +54,7 @@ To check if a client socket is online, server tries to send the following messag
 If any sent query does not in the form stated above, server sends the following query and closes down
 the socket unilaterally:
 
-`END * <incorrect protocol>`
+`END * <incorrect protocol> \r\n`
 
 ### Important notes on the protocol
 
