@@ -2,11 +2,12 @@ import socket
 import ssl
 import time
 import threading
+import signal
 import os
 
 conn_list = dict()  #contains the threads
 object_list = dict()  #contains the sockets
-data_list = list()
+data_list = list()  #contains the thread id's
 
 def hash(a: str):
     temp = ""
@@ -104,6 +105,7 @@ def hash(a: str):
 
 def handler(con, ip, port, user):
     global conn_list, data_list
+    data_list.append(threading.get_ident())
     address = (ip, port)
     try:
         while True:
@@ -118,49 +120,63 @@ def handler(con, ip, port, user):
             elif mes[0] == "END":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
                 try:
-                    object_list[user].unwrap().close()
+                    object_list[user].close()
                 except:
                     pass
                 object_list.pop(user)
                 conn_list.pop(user)
-                print(f"<{user} left>")
+                date = time.asctime()
+                date = date.split(" ")
+                date = " ".join(date[1:-1])
+                print(f"<{user} left> -- {date}")
                 break
             else:
                 try:
                     object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
-                    object_list[user].unwrap().close()
+                    object_list[user].close()
                 except:
                     pass
                 object_list.pop(user)
                 conn_list.pop(user)
-                print(f"<{user} left>")
+                date = time.asctime()
+                date = date.split(" ")
+                date = " ".join(date[1:-1])
+                print(f"<{user} left> -- {date}")
                 break
     except ConnectionResetError:
         try:
-            object_list[user].close()  #this being reached means client has closed down its socket, therefore no unwrap
+            object_list[user].close()
         except:
             pass
         object_list.pop(user)
         conn_list.pop(user)
-        print(f"<{user} left>")
+        date = time.asctime()
+        date = date.split(" ")
+        date = " ".join(date[1:-1])
+        print(f"<{user} left> -- {date}")
     except ValueError:
         try:
-            object_list[user].close()  # same as above
+            object_list[user].close()
         except:
             pass
         object_list.pop(user)
         conn_list.pop(user)
-        print(f"<{user} left>")
+        date = time.asctime()
+        date = date.split(" ")
+        date = " ".join(date[1:-1])
+        print(f"<{user} left> -- {date}")
     except OSError:
         for k, v in object_list.items():
             try:
-                v.close()  # same as above
+                v.close()
             except:
                 pass
         print("<server closing>")
         exit()
 
 def check():
+    global data_list
+    data_list.append(threading.get_ident())
     while True:
         time.sleep(60)
         for k, v in object_list.items():
@@ -168,7 +184,7 @@ def check():
                 v.write(bytes("CHECK \r\n", "utf-8"))
             except:
                 try:
-                    v.close()  # there is no unwrap here because this being reached means client has closed down its socket
+                    v.close()
                 except:
                     pass
                 object_list.pop(k)
@@ -209,15 +225,21 @@ try:
                         conn.close()
                     else:
                         conn.write(bytes(f"ACCEPT {mes[1]} \r\n", "utf-8"))
-                        print(f"<{mes[1]} accepted>")
+                        date = time.asctime()
+                        date = date.split(" ")
+                        date = " ".join(date[1:-1])
+                        print(f"<{mes[1]} accepted> -- {date}")
                         conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1]])
                         object_list[mes[1]] = conn
                         conn_list[mes[1]].start()
 except:
     try:
         for k, v in object_list.items():
-            v.close()  # no unwrap here because there can be many reasons for this code to run
-                       # we are better off by just closing them down
+            v.write(bytes("END * <internal server error> \r\n", "utf-8"))
+            v.close()
+        if os.name != "nt":
+            for k in data_list:
+                signal.pthread_kill(k, signal.SIGKILL)
     except:
         pass
 
