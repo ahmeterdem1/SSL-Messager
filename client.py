@@ -11,6 +11,9 @@ flag = True
 check = True
 target = 0
 thread = 0
+reset = False
+
+command_list = ["quit"]
 def hash(a: str):
     temp = ""
     for k in a:
@@ -106,7 +109,7 @@ def hash(a: str):
     return int(end)
 
 def receiver(sock):
-    global flag, thread
+    global flag, thread, reset, check
     thread = threading.get_ident()
     while True:
         try:
@@ -124,7 +127,12 @@ def receiver(sock):
                 res = " ".join(m[1:-1])
                 print()
                 print(f"{res}")
-            elif m[0] == "END":  # after server sends this message, it performs the unwrap ad closes its socket
+                flag = False
+                reset = True
+                check = False
+                print("Press Enter to continue")
+                break
+            elif m[0] == "END":  # after server sends this message, it closes its socket
                 print()
                 print("<connection closing>")
                 flag = False
@@ -151,34 +159,46 @@ try:
                     if check:
                         username = input("Username: ")
                         password = input("Password: ").replace('\n', '')
-                    s.write(bytes(f"AUTH {username} {password} \r\n", "utf-8"))
-                    mes = s.read(4096)
-                    mes = str(mes)[2:-1].split(" ")
-                    if mes[0] == "END" and mes[1] == "*":
-                        res = " ".join(mes[2:-1])
-                        print(res)
-                        flag = False
-                    elif mes[0] == "END" and mes[1] != "*":
-                        res = " ".join(mes[1:-1])
-                        print(res)
-                        flag = False
-                        check = True
-                    elif mes[0] == "ACCEPT":
-                        print("<log in complete>")
+                        s.write(bytes(f"AUTH {username} {password} \r\n", "utf-8"))
+                        mes = s.read(4096)
+                        mes = str(mes)[2:-1].split(" ")
+                        if mes[0] == "END" and mes[1] == "*":
+                            res = " ".join(mes[2:-1])
+                            print(res)
+                            flag = False
+                        elif mes[0] == "END" and mes[1] != "*":
+                            res = " ".join(mes[1:-1])
+                            print(res)
+                            flag = False
+                            check = True
+                        elif mes[0] == "ACCEPT":
+                            print("<log in complete>")
+                    flag = True
 
                     if flag:
                         threading.Thread(target=receiver, args=[s]).start()
                         target = input("Input the target: ")
+                        reset = False
 
                     while flag:
                         print("Enter your message:", end=" ")
                         message = sys.stdin.readline(2048)
-                        if flag:
-                            s.write(bytes(f"MSG {target} {username} {str(message)} \r\n", "utf-8"))
+                        command = str(message).split(":")[1]
+                        if command in command_list:
+                            if command == "quit":
+                                s.write(bytes("END <user command> \r\n", "utf-8"))
+                                raise KeyboardInterrupt  # i kinda cheat my way into quitting the program
+                        else:
+                            if flag:
+                                s.write(bytes(f"MSG {target} {username} {str(message)} \r\n", "utf-8"))
+                            if reset:
+                                break
+
             except OSError:
                 print()
                 print("<program ended>")
                 flag = False
+                reset = True
                 if os.name != "nt":
                     try:
                         signal.pthread_kill(thread, signal.SIGKILL)
@@ -189,6 +209,7 @@ try:
                 print()
                 print("<quiting>")
                 flag = False
+                reset = True
                 if os.name != "nt":
                     try:
                         signal.pthread_kill(thread, signal.SIGKILL)
