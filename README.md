@@ -51,14 +51,23 @@ To check if a client socket is online, server tries to send the following messag
 
 `CHECK \r\n`
 
-If any sent query does not in the form stated above, server sends the following query and closes down
+If any sent query is not in the form stated above, server sends the following query and closes down
 the socket unilaterally:
 
 `END * <incorrect protocol> \r\n`
 
+IF user inputs the command ":quit:", client sends the END command:
+
+`END <user command> \r\n`
+
+Server replies with:
+
+`END <end accepted> \r\n`
+
 ### Important notes on the protocol
 
 - MSG and AUTH flagged messages can only be sent from the client.
+- END can be sent by everyone
 - All other messages are sent by the server.
 - Every query ends with "\r\n" but this does not serve a purpose for now.
 - Server messages about errors are written inside <> sings
