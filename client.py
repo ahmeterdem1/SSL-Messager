@@ -12,6 +12,7 @@ check = True
 target = 0
 thread = 0
 reset = False
+token = 0
 
 command_list = ["quit"]
 def hash(a: str):
@@ -172,6 +173,7 @@ try:
                             flag = False
                             check = True
                         elif mes[0] == "ACCEPT":
+                            token = mes[-2]
                             print("<log in complete>")
                     flag = True
 
@@ -183,14 +185,15 @@ try:
                     while flag:
                         print("Enter your message:", end=" ")
                         message = sys.stdin.readline(2048)
-                        command = str(message).split(":")[1]
-                        if command in command_list:
-                            if command == "quit":
-                                s.write(bytes("END <user command> \r\n", "utf-8"))
-                                raise KeyboardInterrupt  # i kinda cheat my way into quitting the program
+                        if str(message)[0] == ":":
+                            command = str(message).split(":")[1]
+                            if command in command_list:
+                                if command == "quit":
+                                    s.write(bytes(f"END <user command> {token} \r\n", "utf-8"))
+                                    raise KeyboardInterrupt  # I kinda cheat my way into quitting the program
                         else:
                             if flag:
-                                s.write(bytes(f"MSG {target} {username} {str(message)} \r\n", "utf-8"))
+                                s.write(bytes(f"MSG {target} {username} {str(message)} {token} \r\n", "utf-8"))
                             if reset:
                                 break
 

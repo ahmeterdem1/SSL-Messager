@@ -4,11 +4,12 @@ import time
 import threading
 import signal
 import os
+import secrets
 
 conn_list = dict()  #contains the threads
 object_list = dict()  #contains the sockets
 data_list = list()  #contains the thread id's
-
+token = 0
 def hash(a: str):
     temp = ""
     for k in a:
@@ -103,19 +104,23 @@ def hash(a: str):
 
     return int(end)
 
-def handler(con, ip, port, user):
+def handler(con, ip, port, user, t):
     global conn_list, data_list
     data_list.append(threading.get_ident())
     address = (ip, port)
+    received = 0
     try:
         while True:
             mes = con.read(4096)
             mes = str(mes)[2:-1].split(" ")
+            received = str(mes[-2])
+            if received != str(t):
+                break
             if mes[0] == "MSG":
                 if not (mes[1] in conn_list.keys()):
                     con.write(bytes("CNT <user not online> \r\n", "utf-8"))
                 else:
-                    res = " ".join(mes[3:-1])
+                    res = " ".join(mes[3:-2])
                     object_list[mes[1]].send(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
             elif mes[0] == "END":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
@@ -143,6 +148,19 @@ def handler(con, ip, port, user):
                 date = " ".join(date[1:-1])
                 print(f"<{user} left> -- {date}")
                 break
+        # out of the loop
+        try:
+            object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
+            object_list[user].close()
+            object_list.pop(user)
+            conn_list.pop(user)
+            date = time.asctime()
+            date = date.split(" ")
+            date = " ".join(date[1:-1])
+            print(f"<{user} left> -- {date}")
+        except:
+            pass
+
     except ConnectionResetError:
         try:
             object_list[user].close()
@@ -224,12 +242,13 @@ try:
                         conn.write(bytes("END <user already online> \r\n", "utf-8"))
                         conn.close()
                     else:
-                        conn.write(bytes(f"ACCEPT {mes[1]} \r\n", "utf-8"))
+                        token = secrets.randbits(16)
+                        conn.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
                         date = time.asctime()
                         date = date.split(" ")
                         date = " ".join(date[1:-1])
                         print(f"<{mes[1]} accepted> -- {date}")
-                        conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1]])
+                        conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
                         object_list[mes[1]] = conn
                         conn_list[mes[1]].start()
 except:
