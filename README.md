@@ -31,17 +31,17 @@ following sentence is sent:
 
 `AUTH username password \r\n`
 
-In response, if accepted, server answers with the following reply:
+In response, if accepted, server answers with the following reply (client receives its token):
 
-`ACCEPT username \r\n`
+`ACCEPT username token \r\n`
 
 If not accepted:
 
 `END <incorrect username or password> \r\n`
 
-To send messages, client sends the following query:
+To send messages, client sends the following query with its session token:
 
-`MSG target username message \r\n`
+`MSG target username message token \r\n`
 
 Server redirects this message to the target in the exact same order, except the first word:
 
@@ -58,7 +58,7 @@ the socket unilaterally:
 
 IF user inputs the command ":quit:", client sends the END command:
 
-`END <user command> \r\n`
+`END <user command> token \r\n`
 
 Server replies with:
 
@@ -71,3 +71,5 @@ Server replies with:
 - All other messages are sent by the server.
 - Every query ends with "\r\n" but this does not serve a purpose for now.
 - Server messages about errors are written inside <> sings
+- Server sends the token once whilst authorizing
+- Client sends its token at each query for validation
