@@ -13,8 +13,9 @@ target = 0
 thread = 0
 reset = False
 token = 0
+new_thread = True
 
-command_list = ["quit"]
+command_list = ["quit", "online", "new_target"]
 def hash(a: str):
     temp = ""
     for k in a:
@@ -110,7 +111,7 @@ def hash(a: str):
     return int(end)
 
 def receiver(sock):
-    global flag, thread, reset, check
+    global flag, thread, reset, check, new_thread
     thread = threading.get_ident()
     while True:
         try:
@@ -131,13 +132,20 @@ def receiver(sock):
                 flag = False
                 reset = True
                 check = False
+                new_thread = True
                 print("Press Enter to continue")
                 break
+            elif m[0] == "CMD":
+                res = " ".join(m[1:-1])
+                print()
+                print(f"{res}")
             elif m[0] == "END":  # after server sends this message, it closes its socket
                 print()
                 print("<connection closing>")
                 flag = False
                 break
+            elif m[0] == "CHECK":
+                continue
         except ConnectionResetError:
             pass
         except ValueError:
@@ -166,7 +174,7 @@ try:
                         if mes[0] == "END" and mes[1] == "*":
                             res = " ".join(mes[2:-1])
                             print(res)
-                            flag = False
+                            break
                         elif mes[0] == "END" and mes[1] != "*":
                             res = " ".join(mes[1:-1])
                             print(res)
@@ -175,27 +183,39 @@ try:
                         elif mes[0] == "ACCEPT":
                             token = mes[-2]
                             print("<log in complete>")
-                    flag = True
+                    if not check:
+                        flag = True
 
                     if flag:
-                        threading.Thread(target=receiver, args=[s]).start()
+                        if new_thread:
+                            threading.Thread(target=receiver, args=[s]).start()
                         target = input("Input the target: ")
                         reset = False
 
                     while flag:
                         print("Enter your message:", end=" ")
                         message = sys.stdin.readline(2048)
-                        if str(message)[0] == ":":
-                            command = str(message).split(":")[1]
-                            if command in command_list:
-                                if command == "quit":
-                                    s.write(bytes(f"END <user command> {token} \r\n", "utf-8"))
-                                    raise KeyboardInterrupt  # I kinda cheat my way into quitting the program
-                        else:
-                            if flag:
-                                s.write(bytes(f"MSG {target} {username} {str(message)} {token} \r\n", "utf-8"))
-                            if reset:
-                                break
+                        try:
+                            if str(message)[0] == ":":
+                                command = str(message).split(":")[1]
+                                if command in command_list:
+                                    if command == "quit":
+                                        s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
+                                        raise KeyboardInterrupt  # I kinda cheat my way into quitting the program
+                                    elif command == "online":
+                                        s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
+                                    elif command == "new_target":
+                                        flag = False
+                                        reset = True
+                                        check = False
+                                        new_thread = False
+                            else:
+                                if flag:
+                                    s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                if reset:
+                                    break
+                        except IndexError:
+                            raise KeyboardInterrupt
 
             except OSError:
                 print()

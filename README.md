@@ -73,3 +73,19 @@ Server replies with:
 - Server messages about errors are written inside <> sings
 - Server sends the token once whilst authorizing
 - Client sends its token at each query for validation
+
+
+## Commands
+
+### :quit:
+
+Closes down the connection by sending END query then quits the program
+
+### :online:
+
+Shows top 100 online users. This limit is for practical reasons.
+
+### :new_target:
+
+Allows user to change targets. Client thread does not get killed. Just
+the target changes.

@@ -121,7 +121,12 @@ def handler(con, ip, port, user, t):
                     con.write(bytes("CNT <user not online> \r\n", "utf-8"))
                 else:
                     res = " ".join(mes[3:-2])
-                    object_list[mes[1]].send(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
+                    object_list[mes[1]].write(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
+            elif mes[0] == "CMD":
+                if mes[1] == "<online>":
+                    l = list(object_list.keys())
+                    res = " ".join(l[:100])  # sends only the first 100 people online
+                    con.write(bytes(f"CMD <{res}> \r\n", "utf-8"))
             elif mes[0] == "END":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
                 try:
@@ -161,6 +166,17 @@ def handler(con, ip, port, user, t):
         except:
             pass
 
+    except IndexError:
+        try:
+            object_list[user].close()
+        except:
+            pass
+        object_list.pop(user)
+        conn_list.pop(user)
+        date = time.asctime()
+        date = date.split(" ")
+        date = " ".join(date[1:-1])
+        print(f"<{user} left> -- {date}")
     except ConnectionResetError:
         try:
             object_list[user].close()
@@ -196,16 +212,19 @@ def check():
     global data_list
     data_list.append(threading.get_ident())
     while True:
-        time.sleep(60)
-        for k, v in object_list.items():
-            try:
-                v.write(bytes("CHECK \r\n", "utf-8"))
-            except:
+        time.sleep(15)
+        try:
+            for k, v in object_list.items():
                 try:
-                    v.close()
+                    v.write(bytes("CHECK \r\n", "utf-8"))
                 except:
-                    pass
-                object_list.pop(k)
+                    try:
+                        v.close()
+                    except:
+                        pass
+                    object_list.pop(k)
+        except RuntimeError:
+            pass
 
 
 
@@ -239,7 +258,7 @@ try:
                         conn.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
                         conn.close()
                     elif mes[1] in object_list.keys():
-                        conn.write(bytes("END <user already online> \r\n", "utf-8"))
+                        conn.write(bytes("END * <user already online> \r\n", "utf-8"))
                         conn.close()
                     else:
                         token = secrets.randbits(16)
