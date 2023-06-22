@@ -99,3 +99,13 @@ Shows top 100 online users. This limit is for practical reasons.
 
 Allows user to change targets. Client thread does not get killed. Just
 the target changes.
+
+## Notes
+
+### Major security issue solved (22 June 2023)
+
+When trying to sign up, if already taken username inputted, server used to put
+the user in *object_list* temporarily by their ip. If another user, logged in,
+typed :online: whilst this process, they could see this ip. 
+
+Ip is now switched with a 64-bit random number given as a temporary name.

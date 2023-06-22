@@ -228,9 +228,10 @@ def check():
 
 
 def put_handler(con, ip, port):
+    temp_name = str(secrets.randbits(64))
     global conn_list, data_list, object_list
     data_list.append(threading.get_ident())
-    object_list[ip] = con
+    object_list[temp_name] = con
     try:
         count = 0
         while count < 60:
@@ -248,7 +249,7 @@ def put_handler(con, ip, port):
                 print(f"<{mess[1]} joined and accepted> -- {date}")
                 conn_list[mess[1]] = threading.Thread(target=handler, args=[con, ip, port, mess[1], token])
                 object_list[mess[1]] = con
-                object_list.pop(ip)
+                object_list.pop(temp_name)
                 conn_list[mess[1]].start()
                 break
             count += 1
@@ -256,7 +257,7 @@ def put_handler(con, ip, port):
             con.write(bytes("END <too many trials> \r\n", "utf-8"))
             con.close()
     except:
-        object_list.pop(ip)
+        object_list.pop(temp_name)
         con.close()
 
 
