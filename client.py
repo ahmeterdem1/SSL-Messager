@@ -215,6 +215,11 @@ try:
                                             reset = True
                                             check = False
                                             new_thread = False
+                                    else:
+                                        if flag:
+                                            s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                        if reset:
+                                            break
                                 else:
                                     if flag:
                                         s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
@@ -224,6 +229,7 @@ try:
                                 raise KeyboardInterrupt
                     else:
                         if check:
+                            flag = False
                             username = input("Username: ")
                             password = input("Password: ").replace('\n', '')
                             s.write(bytes(f"PUT {username} {password} \r\n", "utf-8"))
@@ -242,6 +248,7 @@ try:
                             elif mes[0] == "ACCEPT":
                                 token = mes[-2]
                                 print("<log in complete>")
+                                check = False
                         if not check:
                             flag = True
 
@@ -268,6 +275,11 @@ try:
                                             reset = True
                                             check = False
                                             new_thread = False
+                                    else:
+                                        if flag:
+                                            s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                        if reset:
+                                            break
                                 else:
                                     if flag:
                                         s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
