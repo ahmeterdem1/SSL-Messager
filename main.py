@@ -105,7 +105,7 @@ def hash(a: str):
     return int(end)
 
 def handler(con, ip, port, user, t):
-    global conn_list, data_list
+    global conn_list, data_list, object_list
     data_list.append(threading.get_ident())
     address = (ip, port)
     received = 0
@@ -227,7 +227,37 @@ def check():
             pass
 
 
-
+def put_handler(con, ip, port):
+    global conn_list, data_list, object_list
+    data_list.append(threading.get_ident())
+    object_list[ip] = con
+    try:
+        count = 0
+        while count < 60:
+            con.write(bytes("TRY <username already taken> \r\n", "utf-8"))
+            mess = con.read(4096)
+            mess = str(mess)[2:-1].split(" ")
+            if mess[0] == "PUT" and not (mess[1] in f.keys()):
+                file.write(f"{str(mess[1])},{str(hash(mess[2]))}\n")
+                f[mess[1]] = str(hash(mess[2]))  # appends the data to the ram
+                token = secrets.randbits(16)
+                con.write(bytes(f"ACCEPT {mess[1]} {token} \r\n", "utf-8"))
+                date = time.asctime()
+                date = date.split(" ")
+                date = " ".join(date[1:-1])
+                print(f"<{mess[1]} joined and accepted> -- {date}")
+                conn_list[mess[1]] = threading.Thread(target=handler, args=[con, ip, port, mess[1], token])
+                object_list[mess[1]] = con
+                object_list.pop(ip)
+                conn_list[mess[1]].start()
+                break
+            count += 1
+        if count > 59:
+            con.write(bytes("END <too many trials> \r\n", "utf-8"))
+            con.close()
+    except:
+        object_list.pop(ip)
+        con.close()
 
 
 try:
@@ -268,26 +298,7 @@ try:
                         object_list[mes[1]] = conn
                         conn_list[mes[1]].start()
                     elif mes[0] == "PUT":  # mess instead of mes
-                        for count in range(60):
-                            conn.write(bytes("TRY <username already taken> \r\n", "utf-8"))
-                            mess = conn.read(4096)
-                            mess = str(mess)[2:-1].split(" ")
-                            if mess[0] == "PUT" and not (mess[1] in f.keys()):
-                                file.write(f"{str(mess[1])},{str(hash(mess[2]))}\n")
-                                f[mess[1]] = str(hash(mess[2]))  # appends the data to the ram
-                                token = secrets.randbits(16)
-                                conn.write(bytes(f"ACCEPT {mess[1]} {token} \r\n", "utf-8"))
-                                date = time.asctime()
-                                date = date.split(" ")
-                                date = " ".join(date[1:-1])
-                                print(f"<{mess[1]} joined and accepted> -- {date}")
-                                conn_list[mess[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mess[1], token])
-                                object_list[mess[1]] = conn
-                                conn_list[mess[1]].start()
-                                break
-                        if count > 59:
-                            conn.write(bytes("END <too many trials> \r\n", "utf-8"))
-                            conn.close()
+                        threading.Thread(target=put_handler, args=[conn, addr[0], addr[1]]).start()
                     # normal log in
                     elif not f[mes[1]] == str(hash(mes[2])):
                         print(f[mes[1]])
