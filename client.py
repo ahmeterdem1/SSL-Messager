@@ -6,6 +6,7 @@ import sys
 import signal
 import os
 
+
 address = ("192.168.1.26", 18443)
 flag = True
 check = True
@@ -14,6 +15,7 @@ thread = 0
 reset = False
 token = 0
 new_thread = True
+put = False
 
 command_list = ["quit", "online", "new_target"]
 def hash(a: str):
@@ -164,58 +166,116 @@ try:
     with socket.create_connection(address) as out:
         with context.wrap_socket(out, server_hostname="192.168.1.26") as s:
             try:
+                choice = input("Sign up, y/n?: ")
+                if choice.lower() == "y":
+                    put = True
                 while True:
-                    if check:
-                        username = input("Username: ")
-                        password = input("Password: ").replace('\n', '')
-                        s.write(bytes(f"AUTH {username} {password} \r\n", "utf-8"))
-                        mes = s.read(4096)
-                        mes = str(mes)[2:-1].split(" ")
-                        if mes[0] == "END" and mes[1] == "*":
-                            res = " ".join(mes[2:-1])
-                            print(res)
-                            break
-                        elif mes[0] == "END" and mes[1] != "*":
-                            res = " ".join(mes[1:-1])
-                            print(res)
-                            flag = False
-                            check = True
-                        elif mes[0] == "ACCEPT":
-                            token = mes[-2]
-                            print("<log in complete>")
-                    if not check:
-                        flag = True
+                    if not put:
+                        if check:
+                            username = input("Username: ")
+                            password = input("Password: ").replace('\n', '')
+                            s.write(bytes(f"AUTH {username} {password} \r\n", "utf-8"))
+                            mes = s.read(4096)
+                            mes = str(mes)[2:-1].split(" ")
+                            if mes[0] == "END" and mes[1] == "*":
+                                res = " ".join(mes[2:-1])
+                                print(res)
+                                break
+                            elif mes[0] == "END" and mes[1] != "*":
+                                res = " ".join(mes[1:-1])
+                                print(res)
+                                flag = False
+                                check = True
+                            elif mes[0] == "ACCEPT":
+                                token = mes[-2]
+                                print("<log in complete>")
+                        if not check:
+                            flag = True
 
-                    if flag:
-                        if new_thread:
-                            threading.Thread(target=receiver, args=[s]).start()
-                        target = input("Input the target: ")
-                        reset = False
+                        if flag:
+                            if new_thread:
+                                threading.Thread(target=receiver, args=[s]).start()
+                            target = input("Input the target: ")
+                            reset = False
 
-                    while flag:
-                        print("Enter your message:", end=" ")
-                        message = sys.stdin.readline(2048)
-                        try:
-                            if str(message)[0] == ":":
-                                command = str(message).split(":")[1]
-                                if command in command_list:
-                                    if command == "quit":
-                                        s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
-                                        raise KeyboardInterrupt  # I kinda cheat my way into quitting the program
-                                    elif command == "online":
-                                        s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
-                                    elif command == "new_target":
-                                        flag = False
-                                        reset = True
-                                        check = False
-                                        new_thread = False
-                            else:
-                                if flag:
-                                    s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
-                                if reset:
-                                    break
-                        except IndexError:
-                            raise KeyboardInterrupt
+                        while flag:
+                            print("Enter your message:", end=" ")
+                            message = sys.stdin.readline(2048)
+                            try:
+                                if str(message)[0] == ":":
+                                    command = str(message).split(":")[1]
+                                    if command in command_list:
+                                        if command == "quit":
+                                            s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
+                                            raise KeyboardInterrupt  # I kinda cheat my way into quitting the program
+                                        elif command == "online":
+                                            s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
+                                        elif command == "new_target":
+                                            flag = False
+                                            reset = True
+                                            check = False
+                                            new_thread = False
+                                else:
+                                    if flag:
+                                        s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                    if reset:
+                                        break
+                            except IndexError:
+                                raise KeyboardInterrupt
+                    else:
+                        if check:
+                            username = input("Username: ")
+                            password = input("Password: ").replace('\n', '')
+                            s.write(bytes(f"PUT {username} {password} \r\n", "utf-8"))
+                            mes = s.read(4096)
+                            mes = str(mes)[2:-1].split(" ")
+                            if mes[0] == "TRY":
+                                res = " ".join(mes[1:-1])
+                                print()
+                                print(res)
+                                continue
+                            elif mes[0] == "END":
+                                res = " ".join(mes[1:-1])
+                                print()
+                                print(res)
+                                raise KeyboardInterrupt
+                            elif mes[0] == "ACCEPT":
+                                token = mes[-2]
+                                print("<log in complete>")
+                        if not check:
+                            flag = True
+
+                        if flag:
+                            if new_thread:
+                                threading.Thread(target=receiver, args=[s]).start()
+                            target = input("Input the target: ")
+                            reset = False
+
+                        while flag:
+                            print("Enter your message:", end=" ")
+                            message = sys.stdin.readline(2048)
+                            try:
+                                if str(message)[0] == ":":
+                                    command = str(message).split(":")[1]
+                                    if command in command_list:
+                                        if command == "quit":
+                                            s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
+                                            raise KeyboardInterrupt
+                                        elif command == "online":
+                                            s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
+                                        elif command == "new_target":
+                                            flag = False
+                                            reset = True
+                                            check = False
+                                            new_thread = False
+                                else:
+                                    if flag:
+                                        s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                    if reset:
+                                        break
+                            except IndexError:
+                                raise KeyboardInterrupt
+
 
             except OSError:
                 print()

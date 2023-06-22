@@ -39,6 +39,16 @@ If not accepted:
 
 `END <incorrect username or password> \r\n`
 
+To log in, proper syntax is below:
+
+`PUT username password \r\n`
+
+If username already taken, servers response:
+
+`TRY <username already taken> \r\n`
+
+If not, server just sends the _ACCEPT_ query and logs in the user.
+
 To send messages, client sends the following query with its session token:
 
 `MSG target username message token \r\n`
@@ -66,7 +76,7 @@ Server replies with:
 
 ### Important notes on the protocol
 
-- MSG and AUTH flagged messages can only be sent from the client.
+- MSG, PUT and AUTH flagged messages can only be sent from the client.
 - END can be sent by everyone
 - All other messages are sent by the server.
 - Every query ends with "\r\n" but this does not serve a purpose for now.

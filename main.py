@@ -234,6 +234,8 @@ try:
     with open("user.csv", "r") as file:
         lines = file.readlines()
         f = {k.split(",")[0]: k.split(",")[1].replace("\n", "") for k in lines}
+
+    with open("user.csv", "a") as file:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain("../cert.pem", "../cert.pem")
         context.verify_mode &= ~ssl.CERT_REQUIRED
@@ -249,9 +251,44 @@ try:
 
                     mes = conn.read(4096)
                     mes = str(mes)[2:-1].split(" ")
-                    if not (mes[0] == "AUTH"):
+                    if not (mes[0] == "AUTH" or mes[0] == "PUT"):
                         conn.write(bytes("END * <incorrect protocol> \r\n", "utf-8"))
                         conn.close()
+                    # signing up
+                    elif mes[0] == "PUT" and not (mes[1] in f.keys()):
+                        file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
+                        f[mes[1]] = str(hash(mes[2]))  # appends the data to the ram
+                        token = secrets.randbits(16)
+                        conn.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
+                        date = time.asctime()
+                        date = date.split(" ")
+                        date = " ".join(date[1:-1])
+                        print(f"<{mes[1]} joined and accepted> -- {date}")
+                        conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
+                        object_list[mes[1]] = conn
+                        conn_list[mes[1]].start()
+                    elif mes[0] == "PUT":  # mess instead of mes
+                        for count in range(60):
+                            conn.write(bytes("TRY <username already taken> \r\n", "utf-8"))
+                            mess = conn.read(4096)
+                            mess = str(mess)[2:-1].split(" ")
+                            if mess[0] == "PUT" and not (mess[1] in f.keys()):
+                                file.write(f"{str(mess[1])},{str(hash(mess[2]))}\n")
+                                f[mess[1]] = str(hash(mess[2]))  # appends the data to the ram
+                                token = secrets.randbits(16)
+                                conn.write(bytes(f"ACCEPT {mess[1]} {token} \r\n", "utf-8"))
+                                date = time.asctime()
+                                date = date.split(" ")
+                                date = " ".join(date[1:-1])
+                                print(f"<{mess[1]} joined and accepted> -- {date}")
+                                conn_list[mess[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mess[1], token])
+                                object_list[mess[1]] = conn
+                                conn_list[mess[1]].start()
+                                break
+                        if count > 59:
+                            conn.write(bytes("END <too many trials> \r\n", "utf-8"))
+                            conn.close()
+                    # normal log in
                     elif not f[mes[1]] == str(hash(mes[2])):
                         print(f[mes[1]])
                         print(hash(mes[2]))
