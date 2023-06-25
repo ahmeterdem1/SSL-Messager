@@ -10,6 +10,7 @@ conn_list = dict()  #contains the threads
 object_list = dict()  #contains the sockets
 data_list = list()  #contains the thread id's
 token = 0
+allowed = list("qwertyuopasdfghjklizxcvbnm" + "qwertyuopasdfghjklizxcvbnm".upper() + "1234567890_")
 def hash(a: str):
     temp = ""
     for k in a:
@@ -122,6 +123,11 @@ def handler(con, ip, port, user, t):
                 else:
                     res = " ".join(mes[3:-2])
                     object_list[mes[1]].write(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
+            elif mes[0] == "MSGG":
+                res = " ".join(mes[2:-2])
+                for k in f.keys():
+                    if k != mes[1] and k in object_list.keys():
+                        object_list[k].write(bytes(f"RELAYG {mes[1]} {res} \r\n", "utf-8"))
             elif mes[0] == "CMD":
                 if mes[1] == "<online>":
                     l = list(object_list.keys())
@@ -207,6 +213,8 @@ def handler(con, ip, port, user, t):
                 pass
         print("<server closing>")
         exit()
+    except RuntimeError:
+        pass
 
 def check():
     global data_list
@@ -227,7 +235,7 @@ def check():
             pass
 
 
-def put_handler(con, ip, port):
+def put_handler(con, ip, port, control):
     temp_name = str(secrets.randbits(64))
     global conn_list, data_list, object_list
     data_list.append(threading.get_ident())
@@ -235,10 +243,19 @@ def put_handler(con, ip, port):
     try:
         count = 0
         while count < 60:
-            con.write(bytes("TRY <username already taken> \r\n", "utf-8"))
+            if control:
+                con.write(bytes("TRY <username already taken> \r\n", "utf-8"))
+            else:
+                con.write(bytes("TRY <disallowed characters> \r\n", "utf-8"))
             mess = con.read(4096)
             mess = str(mess)[2:-1].split(" ")
-            if mess[0] == "PUT" and not (mess[1] in f.keys()):
+            for k in mess[1]:
+                if k not in allowed:
+                    control = False
+                    break
+                else:
+                    control = True
+            if mess[0] == "PUT" and not (mess[1] in f.keys()) and control:
                 file.write(f"{str(mess[1])},{str(hash(mess[2]))}\n")
                 f[mess[1]] = str(hash(mess[2]))  # appends the data to the ram
                 token = secrets.randbits(16)
@@ -272,7 +289,7 @@ try:
         context.verify_mode &= ~ssl.CERT_REQUIRED
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-            server.bind(("192.168.1.26", 18443))
+            server.bind(("192.168.1.38", 18443))
             server.listen(5)
 
             with context.wrap_socket(server, server_side=True) as secure_server:
@@ -287,19 +304,26 @@ try:
                         conn.close()
                     # signing up
                     elif mes[0] == "PUT" and not (mes[1] in f.keys()):
-                        file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
-                        f[mes[1]] = str(hash(mes[2]))  # appends the data to the ram
-                        token = secrets.randbits(16)
-                        conn.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
-                        date = time.asctime()
-                        date = date.split(" ")
-                        date = " ".join(date[1:-1])
-                        print(f"<{mes[1]} joined and accepted> -- {date}")
-                        conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
-                        object_list[mes[1]] = conn
-                        conn_list[mes[1]].start()
+                        c = True
+                        for a in mes[1]:
+                            if a not in allowed:
+                                c = False
+                        if c:
+                            file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
+                            f[mes[1]] = str(hash(mes[2]))  # appends the data to the ram
+                            token = secrets.randbits(16)
+                            conn.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
+                            date = time.asctime()
+                            date = date.split(" ")
+                            date = " ".join(date[1:-1])
+                            print(f"<{mes[1]} joined and accepted> -- {date}")
+                            conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
+                            object_list[mes[1]] = conn
+                            conn_list[mes[1]].start()
+                        else:
+                            threading.Thread(target=put_handler, args=[conn, addr[0], addr[1], c]).start()
                     elif mes[0] == "PUT":  # mess instead of mes
-                        threading.Thread(target=put_handler, args=[conn, addr[0], addr[1]]).start()
+                        threading.Thread(target=put_handler, args=[conn, addr[0], addr[1], c]).start()
                     # normal log in
                     elif not f[mes[1]] == str(hash(mes[2])):
                         print(f[mes[1]])

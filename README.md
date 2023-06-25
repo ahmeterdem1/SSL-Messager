@@ -53,9 +53,17 @@ To send messages, client sends the following query with its session token:
 
 `MSG target username message token \r\n`
 
-Server redirects this message to the target in the exact same order, except the first word:
+When group chat is enabled:
+
+`MSGG username message token \r\n`
+
+Server redirects this message to the target(s) in the exact same order, except the first word:
 
 `RELAY target username message \r\n`
+
+When group chat is enabled by the sender:
+
+`RELAYG username message \r\n`
 
 To check if a client socket is online, server tries to send the following message (no response needed):
 
@@ -99,6 +107,10 @@ Shows top 100 online users. This limit is for practical reasons.
 
 Allows user to change targets. Client thread does not get killed. Just
 the target changes.
+
+### :toggle:
+
+Toggles the group chat. At log in, group chat is not enabled.
 
 ## Notes
 

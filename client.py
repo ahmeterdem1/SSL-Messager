@@ -7,7 +7,7 @@ import signal
 import os
 
 
-address = ("192.168.1.26", 18443)
+address = ("192.168.1.38", 18443)
 flag = True
 check = True
 target = 0
@@ -16,8 +16,9 @@ reset = False
 token = 0
 new_thread = True
 put = False
+group = False #group chat
 
-command_list = ["quit", "online", "new_target"]
+command_list = ["quit", "online", "new_target", "toggle"]
 def hash(a: str):
     temp = ""
     for k in a:
@@ -127,6 +128,14 @@ def receiver(sock):
                 date = date.split(" ")
                 date = " ".join(date[1:-1])
                 print(f"> {m[2]}: {res} -- {date}")
+            elif m[0] == "RELAYG":
+                res = " ".join(m[2:-1])
+                res = res[:-3]
+                print()
+                date = time.asctime()
+                date = date.split(" ")
+                date = " ".join(date[1:-1])
+                print(f"group> {m[1]}: {res} -- {date}")
             elif m[0] == "CNT":
                 res = " ".join(m[1:-1])
                 print()
@@ -141,9 +150,16 @@ def receiver(sock):
                 res = " ".join(m[1:-1])
                 print()
                 print(f"{res}")
-            elif m[0] == "END":  # after server sends this message, it closes its socket
+            elif m[0] == "END" and m[1] != "*":  # after server sends this message, it closes its socket
+                res = " ".join(m[1:-1])
                 print()
-                print("<connection closing>")
+                print(f"{res}")
+                flag = False
+                break
+            elif m[0] == "END" and m[1] == "*":
+                res = " ".join(m[2:-1])
+                print()
+                print(f"{res}")
                 flag = False
                 break
             elif m[0] == "CHECK":
@@ -164,7 +180,7 @@ context.verify_mode &= ~ssl.CERT_REQUIRED
 
 try:
     with socket.create_connection(address) as out:
-        with context.wrap_socket(out, server_hostname="192.168.1.26") as s:
+        with context.wrap_socket(out, server_hostname="192.168.1.38") as s:
             try:
                 choice = input("Sign up, y/n?: ")
                 if choice.lower() == "y":
@@ -215,14 +231,21 @@ try:
                                             reset = True
                                             check = False
                                             new_thread = False
+                                        elif command == "toggle":
+                                            group = not group
                                     else:
-                                        if flag:
+                                        if flag and not group:
                                             s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                        elif flag and group:
+                                            s.write(bytes(f"MSGG {username} {str(message)} {str(token)} \r\n", "utf-8"))
                                         if reset:
                                             break
                                 else:
-                                    if flag:
+                                    if flag and not group:
                                         s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                    elif flag and group:
+                                        s.write(bytes(f"MSGG {username} {str(message)} {str(token)} \r\n", "utf-8"))
+
                                     if reset:
                                         break
                             except IndexError:
@@ -275,14 +298,21 @@ try:
                                             reset = True
                                             check = False
                                             new_thread = False
+                                        elif command == "toggle":
+                                            group = not group
                                     else:
-                                        if flag:
+                                        if flag and not group:
                                             s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                        elif flag and group:
+                                            s.write(bytes(f"MSGG {username} {str(message)} {str(token)} \r\n", "utf-8"))
+
                                         if reset:
                                             break
                                 else:
-                                    if flag:
+                                    if flag and not group:
                                         s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
+                                    elif flag and group:
+                                        s.write(bytes(f"MSGG {username} {str(message)} {str(token)} \r\n", "utf-8"))
                                     if reset:
                                         break
                             except IndexError:
