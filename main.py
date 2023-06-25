@@ -323,7 +323,7 @@ try:
                         else:
                             threading.Thread(target=put_handler, args=[conn, addr[0], addr[1], c]).start()
                     elif mes[0] == "PUT":  # mess instead of mes
-                        threading.Thread(target=put_handler, args=[conn, addr[0], addr[1], c]).start()
+                        threading.Thread(target=put_handler, args=[conn, addr[0], addr[1], True]).start()
                     # normal log in
                     elif not f[mes[1]] == str(hash(mes[2])):
                         print(f[mes[1]])
