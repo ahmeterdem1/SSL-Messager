@@ -82,15 +82,60 @@ Server replies with:
 
 `END <end accepted> \r\n`
 
+## File Transfer Protocol
+
+Transmission of any file is surrounded by queries. For client and server,
+these queries may differ but indeed the system is the same.
+
+When client starts file transmission:
+
+`BEGINF filename.extension target token \r\n`
+
+Since files are uploaded for another user, target is needed.
+Server gets the filename and extension from this query. Server
+saves the file as _target+filename.extension_.
+
+Client sends the following query after its transmission ends:
+
+`ENDF token \r\n`
+
+Server expects that any file transmission ends within 5 seconds.
+This naturally limits the allowed data per file. If this limit is
+reached, file is still saved with so far sent data, but it will be
+incomplete and probably unreadable. This limit is for practical reasons.
+This is just a basic messaging app with some essential features.
+
+After server receives and saves all the data, responds to indicate completion:
+
+`CMD <upload complete> \r\n`
+
+or
+
+`CMD <problem with command> \r\n`
+
+depending on the success.
+
+When user requests to download files sent to them, a command is sent:
+
+`CMD <get> token \r\n`
+
+Server replies this with a beginning query, this time without the "F" to indicate
+there may be multiple files to send:
+
+`BEGIN amount_of_files \r\n`
+
+Client gets the information on amount of files to receive from this query. After that,
+server applies the same method as client, except there is no token or target. File names
+are sent in raw form, without the "target+" part. Same 5 second principle is used.
+
+
 ### Important notes on the protocol
 
-- MSG, PUT and AUTH flagged messages can only be sent from the client.
-- END can be sent by everyone
-- All other messages are sent by the server.
 - Every query ends with "\r\n" but this does not serve a purpose for now.
 - Server messages about errors are written inside <> sings
 - Server sends the token once whilst authorizing
 - Client sends its token at each query for validation
+- At users download request, files intended for them are searched with ls and grep. Beware of injections with username.
 
 
 ## Commands
@@ -111,6 +156,15 @@ the target changes.
 ### :toggle:
 
 Toggles the group chat. At log in, group chat is not enabled.
+
+### :upload:
+
+Upload a file, one at a time.
+
+### :download:
+
+Download all files sent to you. Clears the history, so if commanded again,
+no duplicate files are downloaded.
 
 ## Notes
 

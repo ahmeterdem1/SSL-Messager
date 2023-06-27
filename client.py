@@ -6,7 +6,6 @@ import sys
 import signal
 import os
 
-
 address = ("192.168.1.38", 18443)
 flag = True
 check = True
@@ -17,8 +16,9 @@ token = 0
 new_thread = True
 put = False
 group = False #group chat
+down = False
 
-command_list = ["quit", "online", "new_target", "toggle"]
+command_list = ["quit", "online", "new_target", "toggle", "upload", "download"]
 def hash(a: str):
     temp = ""
     for k in a:
@@ -114,7 +114,7 @@ def hash(a: str):
     return int(end)
 
 def receiver(sock):
-    global flag, thread, reset, check, new_thread
+    global flag, thread, reset, check, new_thread, down
     thread = threading.get_ident()
     while True:
         try:
@@ -163,6 +163,27 @@ def receiver(sock):
                 flag = False
                 break
             elif m[0] == "CHECK":
+                continue
+            elif m[0] == "BEGIN":
+                amount = int(m[1])
+                down = True
+                for k in range(amount):
+                    new_file = sock.read(4096)
+                    new_file = str(new_file)[2:-1].split(" ")
+                    name = new_file[1]
+                    begin = time.time()
+                    with open(name, "xb") as save:
+                        while True:
+                            data = sock.read(4096 * 4096)
+                            end = time.time()
+                            control_data = str(data)[2:-1].split(" ")
+                            if control_data[0] == "ENDF":
+                                break
+                            elif end - begin > 5:
+                                break
+                            save.write(data)
+                down = False
+            elif m[0] == "ENDF" or m[0] == "BEGINF":
                 continue
         except ConnectionResetError:
             pass
@@ -221,18 +242,47 @@ try:
                                 if str(message)[0] == ":":
                                     command = str(message).split(":")[1]
                                     if command in command_list:
+
                                         if command == "quit":
                                             s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
                                             raise KeyboardInterrupt  # I kinda cheat my way into quitting the program
+
                                         elif command == "online":
                                             s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
+
                                         elif command == "new_target":
                                             flag = False
                                             reset = True
                                             check = False
                                             new_thread = False
+
                                         elif command == "toggle":
                                             group = not group
+
+                                        elif command == "upload":
+                                            path = input("Enter the file path: ")
+                                            try:
+                                                with open(path, "rb") as up:
+                                                    upload = up.read()
+                                                    if os.name == "nt" and "\\" in path:
+                                                        extension = path.split("\\")[-1]
+                                                    elif "/" in path:
+                                                        extension = path.split("/")[-1]
+                                                    else:
+                                                        extension = path
+                                                    s.write(bytes(f"BEGINF {extension} {target} {str(token)} \r\n", "utf-8"))
+                                                    s.write(upload)
+                                                    time.sleep(5)
+                                                    s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
+                                            except:
+                                                print("A problem has occured, try again.")
+
+                                        elif command == "download":
+                                            s.write(bytes(f"CMD <get> {token} \r\n", "utf-8"))
+                                            while True:
+                                                time.sleep(0.1)
+                                                if not down:
+                                                    break
                                     else:
                                         if flag and not group:
                                             s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
@@ -288,18 +338,47 @@ try:
                                 if str(message)[0] == ":":
                                     command = str(message).split(":")[1]
                                     if command in command_list:
+
                                         if command == "quit":
                                             s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
                                             raise KeyboardInterrupt
+
                                         elif command == "online":
                                             s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
+
                                         elif command == "new_target":
                                             flag = False
                                             reset = True
                                             check = False
                                             new_thread = False
+
                                         elif command == "toggle":
                                             group = not group
+
+                                        elif command == "upload":
+                                            path = input("Enter the file path: ")
+                                            try:
+                                                with open(path, "rb") as up:
+                                                    upload = up.read()
+                                                    if os.name == "nt" and "\\" in path:
+                                                        extension = path.split("\\")[-1]
+                                                    elif "/" in path:
+                                                        extension = path.split("/")[-1]
+                                                    else:
+                                                        extension = path
+                                                    s.write(bytes(f"BEGINF {extension} {target} {str(token)} \r\n", "utf-8"))
+                                                    s.write(upload)
+                                                    time.sleep(5)
+                                                    s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
+                                            except:
+                                                print("A problem has occured, try again.")
+
+                                        elif command == "download":
+                                            s.write(bytes(f"CMD <get> {token} \r\n", "utf-8"))
+                                            while True:
+                                                time.sleep(0.1)
+                                                if not down:
+                                                    break
                                     else:
                                         if flag and not group:
                                             s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))

@@ -11,6 +11,7 @@ object_list = dict()  #contains the sockets
 data_list = list()  #contains the thread id's
 token = 0
 allowed = list("qwertyuopasdfghjklizxcvbnm" + "qwertyuopasdfghjklizxcvbnm".upper() + "1234567890_")
+restricted = ["main.py", "client.py", "user.csv"]  # put the crucial files of the server here
 def hash(a: str):
     temp = ""
     for k in a:
@@ -133,6 +134,30 @@ def handler(con, ip, port, user, t):
                     l = list(object_list.keys())
                     res = " ".join(l[:100])  # sends only the first 100 people online
                     con.write(bytes(f"CMD <{res}> \r\n", "utf-8"))
+                elif mes[1] == "<get>":
+                    file_list = list()
+                    with os.popen(f"ls | grep '{user}+'") as sub:  # we put username in grep, beware of injections
+                        file_list = [k.replace("\n", "") for k in sub.readlines()]
+                    for k in restricted:
+                        try:
+                            file_list.remove(k)
+                        except:
+                            pass
+                    con.write(bytes(f"BEGIN {str(len(file_list))} \r\n", "utf-8"))
+                    for k in file_list:
+                        name = k.split("+")[-1]
+                        with open(k, "rb") as to_send:
+                            con.write(bytes(f"BEGINF {name} \r\n", "utf-8"))
+                            time.sleep(1)
+                            data = to_send.read()
+                            con.write(data)
+                            time.sleep(5)
+                            con.write(bytes("ENDF \r\n", "utf-8"))
+                    con.write(bytes("CMD <file send complete> \r\n", "utf-8"))
+                    for k in file_list:
+                        os.remove(k)
+
+
             elif mes[0] == "END":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
                 try:
@@ -146,6 +171,24 @@ def handler(con, ip, port, user, t):
                 date = " ".join(date[1:-1])
                 print(f"<{user} left> -- {date}")
                 break
+            elif mes[0] == "BEGINF":
+                filename = mes[2] + "+" + mes[1]
+                try:
+                    with open(filename, "xb") as new_file:
+                        begin = time.time()
+                        while True:
+                            new_data = con.read(4096 * 4096)
+                            str_data = str(new_data)[2:-1].split(" ")
+                            end = time.time()
+                            if str_data[0] == "ENDF" and str_data[1] == str(t) and str_data[2] == "\r\n":
+                                break
+                            elif end - begin > 5:
+                                break
+                            new_file.write(new_data)
+                    con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
+                    continue
+                except:
+                    con.write(bytes("CMD <problem with command> \r\n", "utf-8"))
             else:
                 try:
                     object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
