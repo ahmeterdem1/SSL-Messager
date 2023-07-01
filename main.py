@@ -9,6 +9,7 @@ import secrets
 conn_list = dict()  #contains the threads
 object_list = dict()  #contains the sockets
 data_list = list()  #contains the thread id's
+group_list = dict()  #list of users toggled group chat
 token = 0
 allowed = list("qwertyuopasdfghjklizxcvbnm" + "qwertyuopasdfghjklizxcvbnm".upper() + "1234567890_")
 restricted = ["main.py", "client.py", "user.csv"]  # put the crucial files of the server here
@@ -107,8 +108,9 @@ def hash(a: str):
     return int(end)
 
 def handler(con, ip, port, user, t):
-    global conn_list, data_list, object_list
+    global conn_list, data_list, object_list, group_list
     data_list.append(threading.get_ident())
+    group_list[user] = False
     address = (ip, port)
     received = 0
     try:
@@ -118,17 +120,20 @@ def handler(con, ip, port, user, t):
             received = str(mes[-2])
             if received != str(t):
                 break
+
             if mes[0] == "MSG":
                 if not (mes[1] in conn_list.keys()):
                     con.write(bytes("CNT <user not online> \r\n", "utf-8"))
                 else:
                     res = " ".join(mes[3:-2])
                     object_list[mes[1]].write(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
+
             elif mes[0] == "MSGG":
                 res = " ".join(mes[2:-2])
                 for k in f.keys():
-                    if k != mes[1] and k in object_list.keys():
+                    if k != mes[1] and (k in object_list.keys()) and group_list[k]:
                         object_list[k].write(bytes(f"RELAYG {mes[1]} {res} \r\n", "utf-8"))
+
             elif mes[0] == "CMD":
                 if mes[1] == "<online>":
                     l = list(object_list.keys())
@@ -156,7 +161,8 @@ def handler(con, ip, port, user, t):
                     con.write(bytes("CMD <file send complete> \r\n", "utf-8"))
                     for k in file_list:
                         os.remove(k)
-
+                elif mes[1] == "<group>":
+                    group_list[user] = not group_list[user]
 
             elif mes[0] == "END":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
@@ -171,6 +177,7 @@ def handler(con, ip, port, user, t):
                 date = " ".join(date[1:-1])
                 print(f"<{user} left> -- {date}")
                 break
+
             elif mes[0] == "BEGINF":
                 filename = mes[2] + "+" + mes[1]
                 try:
@@ -189,6 +196,7 @@ def handler(con, ip, port, user, t):
                     continue
                 except:
                     con.write(bytes("CMD <problem with command> \r\n", "utf-8"))
+
             else:
                 try:
                     object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
@@ -332,7 +340,7 @@ try:
         context.verify_mode &= ~ssl.CERT_REQUIRED
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-            server.bind(("192.168.1.38", 18443))
+            server.bind(("192.168.1.4", 18443))
             server.listen(5)
 
             with context.wrap_socket(server, server_side=True) as secure_server:

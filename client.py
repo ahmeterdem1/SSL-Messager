@@ -6,7 +6,7 @@ import sys
 import signal
 import os
 
-address = ("192.168.1.38", 18443)
+address = ("192.168.1.4", 18443)
 flag = True
 check = True
 target = 0
@@ -18,7 +18,10 @@ put = False
 group = False #group chat
 down = False
 
-command_list = ["quit", "online", "new_target", "toggle", "upload", "download"]
+if os.name == "nt":
+    os.system("color")
+
+command_list = ["quit", "online", "new_target", "toggle", "upload", "download", "status"]
 def hash(a: str):
     temp = ""
     for k in a:
@@ -153,13 +156,13 @@ def receiver(sock):
             elif m[0] == "END" and m[1] != "*":  # after server sends this message, it closes its socket
                 res = " ".join(m[1:-1])
                 print()
-                print(f"{res}")
+                print(f"\033[91m {res} \x1b[0m")
                 flag = False
                 break
             elif m[0] == "END" and m[1] == "*":
                 res = " ".join(m[2:-1])
                 print()
-                print(f"{res}")
+                print(f"\033[91m {res} \x1b[0m")
                 flag = False
                 break
             elif m[0] == "CHECK":
@@ -188,10 +191,10 @@ def receiver(sock):
         except ConnectionResetError:
             pass
         except ValueError:
-            print("<server closed>")
+            print("\033[91m <server closed> \x1b[0m")
             break
         except OSError:
-            print("<program ending>")
+            print("\033[91m <program ending> \x1b[0m")
             break
 
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -201,7 +204,7 @@ context.verify_mode &= ~ssl.CERT_REQUIRED
 
 try:
     with socket.create_connection(address) as out:
-        with context.wrap_socket(out, server_hostname="192.168.1.38") as s:
+        with context.wrap_socket(out, server_hostname="192.168.1.4") as s:
             try:
                 choice = input("Sign up, y/n?: ")
                 if choice.lower() == "y":
@@ -258,6 +261,11 @@ try:
 
                                         elif command == "toggle":
                                             group = not group
+                                            if group:
+                                                print("\x1b[6;30;42m")
+                                            else:
+                                                print("\x1b[0m")
+                                            s.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
 
                                         elif command == "upload":
                                             path = input("Enter the file path: ")
@@ -283,6 +291,10 @@ try:
                                                 time.sleep(0.1)
                                                 if not down:
                                                     break
+                                        elif command == "status":
+                                            print(f"Target: {target}")
+                                            print(f"Group: {group}")
+
                                     else:
                                         if flag and not group:
                                             s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
@@ -354,6 +366,11 @@ try:
 
                                         elif command == "toggle":
                                             group = not group
+                                            if group:
+                                                print("\x1b[6;30;42m")
+                                            else:
+                                                print("\x1b[0m")
+                                            s.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
 
                                         elif command == "upload":
                                             path = input("Enter the file path: ")
@@ -379,6 +396,10 @@ try:
                                                 time.sleep(0.1)
                                                 if not down:
                                                     break
+                                        elif command == "status":
+                                            print(f"Target: {target}")
+                                            print(f"Group: {group}")
+
                                     else:
                                         if flag and not group:
                                             s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))

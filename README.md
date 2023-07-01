@@ -155,7 +155,10 @@ the target changes.
 
 ### :toggle:
 
-Toggles the group chat. At log in, group chat is not enabled.
+Toggles the group chat. At log in, group chat is not enabled. Group chat
+messages are sent to only those who enabled group chat. Therefore, group
+and private chats are separated. Also, terminal turns green if group chat
+is enabled.
 
 ### :upload:
 
@@ -165,6 +168,10 @@ Upload a file, one at a time.
 
 Download all files sent to you. Clears the history, so if commanded again,
 no duplicate files are downloaded.
+
+### :status:
+
+Shows the current status; target and if group chat is enabled.
 
 ## Notes
 
