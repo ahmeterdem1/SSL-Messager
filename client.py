@@ -138,7 +138,7 @@ def receiver(sock):
                 date = time.asctime()
                 date = date.split(" ")
                 date = " ".join(date[1:-1])
-                print(f"group> {m[1]}: {res} -- {date}")
+                print(f"\x1b[6;30;42mgroup> {m[1]}: {res} -- {date} \x1b[0m")
             elif m[0] == "CNT":
                 res = " ".join(m[1:-1])
                 print()
@@ -261,10 +261,6 @@ try:
 
                                         elif command == "toggle":
                                             group = not group
-                                            if group:
-                                                print("\x1b[6;30;42m")
-                                            else:
-                                                print("\x1b[0m")
                                             s.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
 
                                         elif command == "upload":
@@ -366,10 +362,6 @@ try:
 
                                         elif command == "toggle":
                                             group = not group
-                                            if group:
-                                                print("\x1b[6;30;42m")
-                                            else:
-                                                print("\x1b[0m")
                                             s.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
 
                                         elif command == "upload":
