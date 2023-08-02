@@ -193,3 +193,34 @@ the user in *object_list* temporarily by their ip. If another user, logged in,
 typed :online: whilst this process, they could see this ip. 
 
 Ip is now switched with a 64-bit random number given as a temporary name.
+
+### Known problems
+
+#### Log in / Sign up
+
+When someone tries to log in or sign up, their data in the server is carried to
+a thread. This thread is not tracked, so there is no timeout for this process.
+When someone just sits in the log in/sign up screen, this creates a pending thread
+in the server. Build up of these will result in a denial-of-service.
+
+#### Database saving
+
+The csv file is not closed down until the server naturally closes down. So when it
+quits unexpectedly, all newly saved people until then are lost. I did not solve this
+issue because i didn't want the speed impact of reopening and reclosing the database
+everytime someone signs up. Ideal solution to this is async read-write streams within
+the log in screen thread in the server.
+
+#### Unexpected closing down of the server
+
+Up until this commit, server used to commit suicide after facing the slightest disturbance.
+This was indeed intentional. My first goal was to use my own computer as the server, open
+to the public. As many of us can guess, this is not a good idea. So i wanted extra security
+in my code with minimal effort. So i made the server super sensitive. It used to shutdown
+when someone tried to log in with an invalid username. It used to shutdown after receiving
+incorrect protocol syntax. And still aggresive behaviour like this can be found in the code.
+But the server is getting more and more "normal" over time. And i have changed my mind, now
+i use amazons servers instead of my own computer. So more flexible behaviour will continue
+to be implemented. I guess my end goal here would be to connect ciphertools and this project
+and to create a fully functional and fully custom tls server. So one day i will turn to using
+my own computer despite all the possible dangers. 

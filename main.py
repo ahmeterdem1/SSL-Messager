@@ -107,6 +107,73 @@ def hash(a: str):
 
     return int(end)
 
+def intro_handler(connection, address):
+    global data_list, object_list, conn_list
+    data_list.append(threading.get_ident())
+    mes = connection.read(4096)
+    mes = str(mes)[2:-1].split(" ")
+    if not (mes[0] == "AUTH" or mes[0] == "PUT"):
+        connection.write(bytes("END * <incorrect protocol> \r\n", "utf-8"))
+        connection.close()
+    elif mes[0] == "PUT" and not (mes[1] in f.keys()):
+        c = True
+        for a in mes[1]:
+            if a not in allowed:
+                c = False
+        if c:
+            file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
+            f[mes[1]] = str(hash(mes[2]))  # appends the data to the ram
+            token = secrets.randbits(16)
+            connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
+            date = time.asctime()
+            date = date.split(" ")
+            date = " ".join(date[1:-1])
+            print(f"<{mes[1]} joined and accepted> -- {date}")
+            conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
+            object_list[mes[1]] = connection
+            conn_list[mes[1]].start()
+        else:
+            threading.Thread(target=put_handler, args=[connection, address[0], address[1], c]).start()
+    elif mes[0] == "PUT":  # mess instead of mes
+        threading.Thread(target=put_handler, args=[connection, address[0], address[1], True]).start()
+    #normal log in
+    elif mes[1] in f.keys():
+        if not f[mes[1]] == str(hash(mes[2])):
+            print(f[mes[1]])
+            print(hash(mes[2]))
+            connection.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
+            connection.close()
+        elif mes[1] in object_list.keys():
+            connection.write(bytes("END * <user already online> \r\n", "utf-8"))
+            connection.close()
+        else:
+            token = secrets.randbits(16)
+            connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
+            print("bruh")
+            date = time.asctime()
+            date = date.split(" ")
+            date = " ".join(date[1:-1])
+            print(f"<{mes[1]} accepted> -- {date}")
+            conn_list[mes[1]] = threading.Thread(target=handler,
+                                                 args=[connection, address[0], address[1], mes[1], token])
+            object_list[mes[1]] = connection
+            conn_list[mes[1]].start()
+    elif mes[1] in object_list.keys():
+        connection.write(bytes("END * <user already online> \r\n", "utf-8"))
+        connection.close()
+    else:
+        token = secrets.randbits(16)
+        connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
+        print("bruh")
+        date = time.asctime()
+        date = date.split(" ")
+        date = " ".join(date[1:-1])
+        print(f"<{mes[1]} accepted> -- {date}")
+        conn_list[mes[1]] = threading.Thread(target=handler, args=[connection, address[0], address[1], mes[1], token])
+        object_list[mes[1]] = connection
+        conn_list[mes[1]].start()
+
+
 def handler(con, ip, port, user, t):
     global conn_list, data_list, object_list, group_list
     data_list.append(threading.get_ident())
@@ -347,8 +414,13 @@ try:
                 threading.Thread(target=check).start()
                 while True:
                     conn, addr = secure_server.accept()
+                    threading.Thread(target=intro_handler, args=[conn, addr]).start()
 
-                    mes = conn.read(4096)
+                    #Carried this whole part to a different thread
+                    #So that people trying to log in or sign up do not block the slot
+                    #Normally this creates a short lived thread which dies after log in or sign up
+                    #The only danger here is that, what if people dont give any input and just wait
+                    """mes = conn.read(4096)
                     mes = str(mes)[2:-1].split(" ")
                     if not (mes[0] == "AUTH" or mes[0] == "PUT"):
                         conn.write(bytes("END * <incorrect protocol> \r\n", "utf-8"))
@@ -376,11 +448,12 @@ try:
                     elif mes[0] == "PUT":  # mess instead of mes
                         threading.Thread(target=put_handler, args=[conn, addr[0], addr[1], True]).start()
                     # normal log in
-                    elif not f[mes[1]] == str(hash(mes[2])):
-                        print(f[mes[1]])
-                        print(hash(mes[2]))
-                        conn.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
-                        conn.close()
+                    elif mes[1] in f.keys():
+                        if not f[mes[1]] == str(hash(mes[2])):
+                            print(f[mes[1]])
+                            print(hash(mes[2]))
+                            conn.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
+                            conn.close()
                     elif mes[1] in object_list.keys():
                         conn.write(bytes("END * <user already online> \r\n", "utf-8"))
                         conn.close()
@@ -393,7 +466,7 @@ try:
                         print(f"<{mes[1]} accepted> -- {date}")
                         conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
                         object_list[mes[1]] = conn
-                        conn_list[mes[1]].start()
+                        conn_list[mes[1]].start()"""
 except:
     try:
         for k, v in object_list.items():
@@ -404,7 +477,3 @@ except:
                 signal.pthread_kill(k, signal.SIGKILL)
     except:
         pass
-
-
-
-
