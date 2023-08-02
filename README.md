@@ -2,6 +2,17 @@
 
 A basic cyphered tool for messaging.
 
+Our service is online now! You may join us by setting up your client system.
+
+## Setup
+
+Put the client.py file in a folder. Put a certc.pem file that you have created 
+in the parent folder. You are good to go!
+
+The reason that these both files are not in the same directory is that; if they 
+were, my private keys would be in my git folder. I don't want that. So i put them 
+in the parent folder. You may change this setup as you wish in the code.
+
 ## System
 
 main.py file is the server, and client.py file is obviously the client.

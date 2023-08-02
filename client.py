@@ -6,7 +6,7 @@ import sys
 import signal
 import os
 
-address = ("192.168.1.4", 18443)
+address = ("13.50.8.62", 18443)
 flag = True
 check = True
 target = 0
@@ -204,7 +204,7 @@ context.verify_mode &= ~ssl.CERT_REQUIRED
 
 try:
     with socket.create_connection(address) as out:
-        with context.wrap_socket(out, server_hostname="192.168.1.4") as s:
+        with context.wrap_socket(out, server_hostname="13.50.8.62") as s:
             try:
                 choice = input("Sign up, y/n?: ")
                 if choice.lower() == "y":
