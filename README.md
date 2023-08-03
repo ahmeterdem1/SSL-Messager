@@ -203,7 +203,10 @@ a thread. This thread is not tracked, so there is no timeout for this process.
 When someone just sits in the log in/sign up screen, this creates a pending thread
 in the server. Build up of these will result in a denial-of-service.
 
-#### Database saving
+This used not to be in another thread, it was in the main thread. So sitting on the
+log screen used to just block the whole server but it is solved since than.
+
+#### Database saving (prioritized)
 
 The csv file is not closed down until the server naturally closes down. So when it
 quits unexpectedly, all newly saved people until then are lost. I did not solve this
@@ -223,4 +226,64 @@ But the server is getting more and more "normal" over time. And i have changed m
 i use amazons servers instead of my own computer. So more flexible behaviour will continue
 to be implemented. I guess my end goal here would be to connect ciphertools and this project
 and to create a fully functional and fully custom tls server. So one day i will turn to using
-my own computer despite all the possible dangers. 
+my own computer despite all the possible dangers.
+
+#### Inout-Output Mix up
+
+Input and output streams are fed through the same channel, the same terminal. So when more than
+one people are texting at the same time, output of a received message will interrupt the
+input take. A gui solution is required for that. In action, this becomes kind of annoying
+but not that much of a problem.
+
+#### FTP
+
+FTP is a problem itself. I have coded it very poorly because i got lazy. It is basically
+a data collector with a timer in the receiving end, and a normal data streamer in the
+sender end. No problem in the sender but receiving is sometimes problematic. Sometimes
+some parts of the data are missed and broken files get generated. Since the underlying
+protocol here is TCP, this data loss happens internally at the receiver end. Therefore
+better code is needed. I have my plans, but there are still some other things to fix 
+before that.
+
+#### Database itself
+
+Database sometimes breakes down for some reason. Empty lines may generate in the csv file.
+Users get saved in the database without problems but an error in the client side may
+result in a malformed query and this query results in a broken database in the server-side.
+Whole file system of this structure will get an update.
+
+#### Character set
+
+Utf-8 is not enough.
+
+#### Prompts
+
+For some reason, prompts don't get displayed properly. This is not about "Enter your message:"
+showing up more than 1 line above your cursor, it is what should happen. Sometimes this
+prompt never get displayed. And after 10-20 messages all prompts for them get displayed
+at the same time in a chain. The solution for this is a gui. Prompt should be a permanent
+label on the screen. Message box should be the only dynamic place.
+
+#### Commands
+
+Commands get broken sometimes. This is not about the error message. They just break down
+and never produce a result. Unknown reason, may be due to some malformed query.
+
+#### Users
+
+Whole users get broken sometimes. Their messages start to not show up, their commands break
+down, etc. This was observed after a disturbance in the database. After a user breaks down,
+other users sending messages to that user get affected too because of the RELAY query. This
+results in an error message in the servers terminal, but surprisingly server continues to
+operate. KeyError is observed on object_list after a user breaks down. This may happen when
+a user gets cleared from the lists but their connection objects remain intact. In that case,
+the broken users client sees the connection as intact and continues to function. Indeed it is.
+But the "pointer" of the connection socket in the server side is lost. Therefore it is unreachable.
+Client thinks they are online but they are not reachable from the server or by anybody.
+Improving aggressive server action that takes users down the lists when disturbed may be the
+solution.
+
+#### Admin
+
+There is no admin account nor power. This is intentional. This option will be reconsidered
+after a gui version is created.
