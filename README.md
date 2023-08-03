@@ -228,7 +228,7 @@ to be implemented. I guess my end goal here would be to connect ciphertools and 
 and to create a fully functional and fully custom tls server. So one day i will turn to using
 my own computer despite all the possible dangers.
 
-#### Inout-Output Mix up
+#### Input-Output Mix up
 
 Input and output streams are fed through the same channel, the same terminal. So when more than
 one people are texting at the same time, output of a received message will interrupt the
