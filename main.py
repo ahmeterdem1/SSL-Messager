@@ -467,7 +467,11 @@ try:
                         conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
                         object_list[mes[1]] = conn
                         conn_list[mes[1]].start()"""
-except:
+except ssl.SSLError:
+    print("<TLS connection error>")
+    quit()
+except Exception as e:
+    print(f"An unexpected error has occured: {e}")
     try:
         for k, v in object_list.items():
             v.write(bytes("END * <internal server error> \r\n", "utf-8"))

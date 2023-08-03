@@ -203,7 +203,7 @@ context.check_hostname = False
 context.verify_mode &= ~ssl.CERT_REQUIRED
 
 try:
-    with socket.create_connection(address) as out:
+    with socket.create_connection(address, timeout=30) as out:
         with context.wrap_socket(out, server_hostname="13.50.8.62") as s:
             try:
                 choice = input("Sign up, y/n?: ")
@@ -433,8 +433,29 @@ try:
                     except:
                         pass
                 s.close()
+            except Exception as e:
+                print(f"An unexpected error has occured: {e}")
+                print("<quiting>")
+                flag = False
+                reset = True
+                if os.name != "nt":
+                    try:
+                        signal.pthread_kill(thread, signal.SIGKILL)
+                    except:
+                        pass
+                s.close()
+
 
 except ConnectionRefusedError:
     print("<server not online>")
+    sys.exit()
+except socket.timeout:
+    print("<connection timeout - check your internet connection>")
+    sys.exit()
+except ssl.SSLError:
+    print("<TLS connection error>")
+    sys.exit()
+except Exception as e:
+    print(f"An unexpected error has occured: {e}")
     sys.exit()
 
