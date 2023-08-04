@@ -194,9 +194,19 @@ typed :online: whilst this process, they could see this ip.
 
 Ip is now switched with a 64-bit random number given as a temporary name.
 
+### Major security issue solved (4 August 2023)
+
+There was a token system in the server side to prevent impersonation. Even
+though it was coded in the system, it was completely ineffective. Code for
+token checks are improved with the creation of a new data block "token_list".
+It is written into when someone logs in to the server. Initial usernames are
+coupled with server generated tokens. These tokens are checked every time a
+MSG, MSGG or FTP query is received. Therefore all impersonations are prevented
+properly now.
+
 ### Known problems
 
-#### Log in / Sign up
+#### Log in / Sign up (partially solved)
 
 When someone tries to log in or sign up, their data in the server is carried to
 a thread. This thread is not tracked, so there is no timeout for this process.
@@ -206,7 +216,7 @@ in the server. Build up of these will result in a denial-of-service.
 This used not to be in another thread, it was in the main thread. So sitting on the
 log screen used to just block the whole server but it is solved since than.
 
-#### Database saving (prioritized)
+#### Database saving (solved)
 
 The csv file is not closed down until the server naturally closes down. So when it
 quits unexpectedly, all newly saved people until then are lost. I did not solve this

@@ -11,6 +11,7 @@ object_list = dict()  #contains the sockets
 data_list = list()  #contains the thread id's
 group_list = dict()  #list of users toggled group chat
 token = 0
+token_list = dict()  #users coupled with their tokens
 allowed = list("qwertyuopasdfghjklizxcvbnm" + "qwertyuopasdfghjklizxcvbnm".upper() + "1234567890_")
 restricted = ["main.py", "client.py", "user.csv"]  # put the crucial files of the server here
 def hash(a: str):
@@ -108,7 +109,7 @@ def hash(a: str):
     return int(end)
 
 def intro_handler(connection, address):
-    global data_list, object_list, conn_list
+    global data_list, object_list, conn_list, token_list
     data_list.append(threading.get_ident())
     mes = connection.read(4096)
     mes = str(mes)[2:-1].split(" ")
@@ -121,9 +122,11 @@ def intro_handler(connection, address):
             if a not in allowed:
                 c = False
         if c:
-            file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
+            with open("user.csv", "a") as file:
+                file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
             f[mes[1]] = str(hash(mes[2]))  # appends the data to the ram
             token = secrets.randbits(16)
+            token_list[mes[1]] = token
             connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
             date = time.asctime()
             date = date.split(" ")
@@ -148,8 +151,8 @@ def intro_handler(connection, address):
             connection.close()
         else:
             token = secrets.randbits(16)
+            token_list[mes[1]] = token
             connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
-            print("bruh")
             date = time.asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
@@ -163,6 +166,7 @@ def intro_handler(connection, address):
         connection.close()
     else:
         token = secrets.randbits(16)
+        token_list[mes[1]] = token
         connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
         print("bruh")
         date = time.asctime()
@@ -175,7 +179,7 @@ def intro_handler(connection, address):
 
 
 def handler(con, ip, port, user, t):
-    global conn_list, data_list, object_list, group_list
+    global conn_list, data_list, object_list, group_list, token_list
     data_list.append(threading.get_ident())
     group_list[user] = False
     address = (ip, port)
@@ -187,15 +191,22 @@ def handler(con, ip, port, user, t):
             received = str(mes[-2])
             if received != str(t):
                 break
-
             if mes[0] == "MSG":
                 if not (mes[1] in conn_list.keys()):
                     con.write(bytes("CNT <user not online> \r\n", "utf-8"))
+                elif received != str(token_list[mes[2]]):
+                    print(mes[2])
+                    print(received)
+                    print(token_list[mes[2]])
+                    # always check the received username for the token
+                    break
                 else:
                     res = " ".join(mes[3:-2])
                     object_list[mes[1]].write(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
 
             elif mes[0] == "MSGG":
+                if received != str(token_list[mes[1]]):
+                    break
                 res = " ".join(mes[2:-2])
                 for k in f.keys():
                     if k != mes[1] and (k in object_list.keys()) and group_list[k]:
@@ -246,6 +257,8 @@ def handler(con, ip, port, user, t):
                 break
 
             elif mes[0] == "BEGINF":
+                if received != str(token_list[user]):
+                    break
                 filename = mes[2] + "+" + mes[1]
                 try:
                     with open(filename, "xb") as new_file:
@@ -282,6 +295,7 @@ def handler(con, ip, port, user, t):
             object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
             object_list[user].close()
             object_list.pop(user)
+            token_list.pop(user)
             conn_list.pop(user)
             date = time.asctime()
             date = date.split(" ")
@@ -297,6 +311,7 @@ def handler(con, ip, port, user, t):
             pass
         object_list.pop(user)
         conn_list.pop(user)
+        token_list.pop(user)
         date = time.asctime()
         date = date.split(" ")
         date = " ".join(date[1:-1])
@@ -308,6 +323,7 @@ def handler(con, ip, port, user, t):
             pass
         object_list.pop(user)
         conn_list.pop(user)
+        token_list.pop(user)
         date = time.asctime()
         date = date.split(" ")
         date = " ".join(date[1:-1])
@@ -319,6 +335,7 @@ def handler(con, ip, port, user, t):
             pass
         object_list.pop(user)
         conn_list.pop(user)
+        token_list.pop(user)
         date = time.asctime()
         date = date.split(" ")
         date = " ".join(date[1:-1])
@@ -355,7 +372,7 @@ def check():
 
 def put_handler(con, ip, port, control):
     temp_name = str(secrets.randbits(64))
-    global conn_list, data_list, object_list
+    global conn_list, data_list, object_list, token_list, f
     data_list.append(threading.get_ident())
     object_list[temp_name] = con
     try:
@@ -374,9 +391,11 @@ def put_handler(con, ip, port, control):
                 else:
                     control = True
             if mess[0] == "PUT" and not (mess[1] in f.keys()) and control:
-                file.write(f"{str(mess[1])},{str(hash(mess[2]))}\n")
+                with open("user.csv", "a") as x:
+                    x.write(f"{str(mess[1])},{str(hash(mess[2]))}\n")
                 f[mess[1]] = str(hash(mess[2]))  # appends the data to the ram
                 token = secrets.randbits(16)
+                token_list[mess[1]] = token
                 con.write(bytes(f"ACCEPT {mess[1]} {token} \r\n", "utf-8"))
                 date = time.asctime()
                 date = date.split(" ")
@@ -401,72 +420,21 @@ try:
         lines = file.readlines()
         f = {k.split(",")[0]: k.split(",")[1].replace("\n", "") for k in lines}
 
-    with open("user.csv", "a") as file:
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.load_cert_chain("../cert.pem", "../cert.pem")
-        context.verify_mode &= ~ssl.CERT_REQUIRED
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain("../cert.pem", "../cert.pem")
+    context.verify_mode &= ~ssl.CERT_REQUIRED
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-            server.bind(("172.31.19.23", 18443))
-            server.listen(5)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.bind(("192.168.1.6", 18443))
+        server.listen(5)
 
-            with context.wrap_socket(server, server_side=True) as secure_server:
-                threading.Thread(target=check).start()
-                while True:
-                    conn, addr = secure_server.accept()
-                    threading.Thread(target=intro_handler, args=[conn, addr]).start()
+        with context.wrap_socket(server, server_side=True) as secure_server:
+            threading.Thread(target=check).start()
+            while True:
+                conn, addr = secure_server.accept()
+                threading.Thread(target=intro_handler, args=[conn, addr]).start()
 
-                    #Carried this whole part to a different thread
-                    #So that people trying to log in or sign up do not block the slot
-                    #Normally this creates a short lived thread which dies after log in or sign up
-                    #The only danger here is that, what if people dont give any input and just wait
-                    """mes = conn.read(4096)
-                    mes = str(mes)[2:-1].split(" ")
-                    if not (mes[0] == "AUTH" or mes[0] == "PUT"):
-                        conn.write(bytes("END * <incorrect protocol> \r\n", "utf-8"))
-                        conn.close()
-                    # signing up
-                    elif mes[0] == "PUT" and not (mes[1] in f.keys()):
-                        c = True
-                        for a in mes[1]:
-                            if a not in allowed:
-                                c = False
-                        if c:
-                            file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
-                            f[mes[1]] = str(hash(mes[2]))  # appends the data to the ram
-                            token = secrets.randbits(16)
-                            conn.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
-                            date = time.asctime()
-                            date = date.split(" ")
-                            date = " ".join(date[1:-1])
-                            print(f"<{mes[1]} joined and accepted> -- {date}")
-                            conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
-                            object_list[mes[1]] = conn
-                            conn_list[mes[1]].start()
-                        else:
-                            threading.Thread(target=put_handler, args=[conn, addr[0], addr[1], c]).start()
-                    elif mes[0] == "PUT":  # mess instead of mes
-                        threading.Thread(target=put_handler, args=[conn, addr[0], addr[1], True]).start()
-                    # normal log in
-                    elif mes[1] in f.keys():
-                        if not f[mes[1]] == str(hash(mes[2])):
-                            print(f[mes[1]])
-                            print(hash(mes[2]))
-                            conn.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
-                            conn.close()
-                    elif mes[1] in object_list.keys():
-                        conn.write(bytes("END * <user already online> \r\n", "utf-8"))
-                        conn.close()
-                    else:
-                        token = secrets.randbits(16)
-                        conn.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
-                        date = time.asctime()
-                        date = date.split(" ")
-                        date = " ".join(date[1:-1])
-                        print(f"<{mes[1]} accepted> -- {date}")
-                        conn_list[mes[1]] = threading.Thread(target=handler, args=[conn, addr[0], addr[1], mes[1], token])
-                        object_list[mes[1]] = conn
-                        conn_list[mes[1]].start()"""
+
 except ssl.SSLError:
     print("<TLS connection error>")
     quit()
