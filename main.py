@@ -425,7 +425,7 @@ try:
     context.verify_mode &= ~ssl.CERT_REQUIRED
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-        server.bind(("192.168.1.6", 18443))
+        server.bind(("172.31.19.23", 18443))
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:
