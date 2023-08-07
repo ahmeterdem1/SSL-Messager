@@ -273,10 +273,13 @@ try:
                                                 with open(path, "rb") as up:
                                                     upload = up.read()
                                                     if os.name == "nt" and "\\" in path:
+                                                        path = path.replace(" ", "_")
                                                         extension = path.split("\\")[-1]
                                                     elif "/" in path:
+                                                        path = path.replace(" ", "_")
                                                         extension = path.split("/")[-1]
                                                     else:
+                                                        path = path.replace(" ", "_")
                                                         extension = path
                                                     s.write(bytes(f"BEGINF {extension} {target} {str(token)} \r\n", "utf-8"))
                                                     s.write(upload)
@@ -373,14 +376,16 @@ try:
                                                 with open(path, "rb") as up:
                                                     upload = up.read()
                                                     if os.name == "nt" and "\\" in path:
+                                                        path = path.replace(" ", "_")
                                                         extension = path.split("\\")[-1]
                                                     elif "/" in path:
+                                                        path = path.replace(" ", "_")
                                                         extension = path.split("/")[-1]
                                                     else:
+                                                        path = path.replace(" ", "_")
                                                         extension = path
                                                     s.write(bytes(f"BEGINF {extension} {target} {str(token)} \r\n", "utf-8"))
                                                     s.write(upload)
-                                                    time.sleep(5)
                                                     s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
                                             except:
                                                 print("A problem has occured, try again.")
