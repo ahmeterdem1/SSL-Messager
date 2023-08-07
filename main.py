@@ -231,11 +231,9 @@ def handler(con, ip, port, user, t):
                         name = k.split("+")[-1]
                         with open(k, "rb") as to_send:
                             con.write(bytes(f"BEGINF {name} \r\n", "utf-8"))
-                            time.sleep(1)
                             data = to_send.read()
                             con.write(data)
-                            time.sleep(5)
-                            con.write(bytes("ENDF \r\n", "utf-8"))
+                            con.write(bytes("ENDF ENDF ENDF \r\n", "utf-8"))
                     con.write(bytes("CMD <file send complete> \r\n", "utf-8"))
                     for k in file_list:
                         os.remove(k)
@@ -259,22 +257,29 @@ def handler(con, ip, port, user, t):
             elif mes[0] == "BEGINF":
                 if received != str(token_list[user]):
                     break
-                filename = mes[2] + "+" + mes[1]
+                filename = mes[2] + "+" + str(secrets.randbits(64)) + mes[1]
+                #important bug solved here
                 try:
                     with open(filename, "xb") as new_file:
                         begin = time.time()
                         while True:
-                            new_data = con.read(4096 * 4096)
+                            new_data = con.read(4096)
                             str_data = str(new_data)[2:-1].split(" ")
                             end = time.time()
-                            if str_data[0] == "ENDF" and str_data[1] == str(t) and str_data[2] == "\r\n":
-                                break
-                            elif end - begin > 5:
+                            if len(str_data) >= 3:
+                                if str_data[-3] == "ENDF" and str_data[-2] == str(t):
+                                    if not len(str_data) == 3:
+                                        last_data = bytes(" ".join(list(str_data)[:-3]))
+                                        new_file.write(last_data)
+                                    break
+
+                            if end - begin > 5:
                                 break
                             new_file.write(new_data)
                     con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
                     continue
                 except:
+                    print(e)
                     con.write(bytes("CMD <problem with command> \r\n", "utf-8"))
 
             else:
@@ -425,7 +430,7 @@ try:
     context.verify_mode &= ~ssl.CERT_REQUIRED
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-        server.bind(("172.31.19.23", 18443))
+        server.bind(("192.168.1.15", 18443))
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:

@@ -136,8 +136,15 @@ there may be multiple files to send:
 `BEGIN amount_of_files \r\n`
 
 Client gets the information on amount of files to receive from this query. After that,
-server applies the same method as client, except there is no token or target. File names
-are sent in raw form, without the "target+" part. Same 5 second principle is used.
+server applies the same method as client, except:
+
+`ENDF ENDF ENDF \r\n`
+
+This tripple "ENDF" is to prevent bugs arising from within the file data. It is not so
+probable that the sent data chuck not intended to be the last has the same format as this.
+"\r\n" part is not checked, but is assumed to be there while indexing.
+
+File names are sent in raw form, without the "target+" part. Same 5 second principle is used.
 
 
 ### Important notes on the protocol
@@ -224,7 +231,7 @@ issue because i didn't want the speed impact of reopening and reclosing the data
 everytime someone signs up. Ideal solution to this is async read-write streams within
 the log in screen thread in the server.
 
-#### Unexpected closing down of the server
+#### Unexpected closing down of the server (being improved)
 
 Up until this commit, server used to commit suicide after facing the slightest disturbance.
 This was indeed intentional. My first goal was to use my own computer as the server, open
@@ -245,7 +252,7 @@ one people are texting at the same time, output of a received message will inter
 input take. A gui solution is required for that. In action, this becomes kind of annoying
 but not that much of a problem.
 
-#### FTP
+#### FTP (solved, bug fixed)
 
 FTP is a problem itself. I have coded it very poorly because i got lazy. It is basically
 a data collector with a timer in the receiving end, and a normal data streamer in the
@@ -254,6 +261,11 @@ some parts of the data are missed and broken files get generated. Since the unde
 protocol here is TCP, this data loss happens internally at the receiver end. Therefore
 better code is needed. I have my plans, but there are still some other things to fix 
 before that.
+
+A bug is discovered during the improvement of the FTP. If you upload a file and the target
+did not download it yet, if you try to upload it again, server raises an OSError and shuts
+down because there exists a file with the same name. Now a 64-bit random number string is
+added to the name.
 
 #### Database itself
 

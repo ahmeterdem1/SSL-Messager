@@ -6,7 +6,7 @@ import sys
 import signal
 import os
 
-address = ("13.50.8.62", 18443)
+address = ("192.168.1.15", 18443)
 flag = True
 check = True
 target = 0
@@ -177,11 +177,15 @@ def receiver(sock):
                     begin = time.time()
                     with open(name, "xb") as save:
                         while True:
-                            data = sock.read(4096 * 4096)
+                            data = sock.read(4096)
                             end = time.time()
                             control_data = str(data)[2:-1].split(" ")
-                            if control_data[0] == "ENDF":
-                                break
+                            if len(control_data) >= 4:
+                                if control_data[-2] == "ENDF" and control_data[-3] == "ENDF" and control_data[-4] == "ENDF":
+                                    if len(control_data) > 4:
+                                        last_data = bytes(" ".join(control_data[:-4]))
+                                        save.write(last_data)
+                                    break
                             elif end - begin > 5:
                                 break
                             save.write(data)
@@ -204,7 +208,7 @@ context.verify_mode &= ~ssl.CERT_REQUIRED
 
 try:
     with socket.create_connection(address, timeout=30) as out:
-        with context.wrap_socket(out, server_hostname="13.50.8.62") as s:
+        with context.wrap_socket(out, server_hostname="192.168.1.15") as s:
             try:
                 choice = input("Sign up, y/n?: ")
                 if choice.lower() == "y":
@@ -276,7 +280,6 @@ try:
                                                         extension = path
                                                     s.write(bytes(f"BEGINF {extension} {target} {str(token)} \r\n", "utf-8"))
                                                     s.write(upload)
-                                                    time.sleep(5)
                                                     s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
                                             except:
                                                 print("A problem has occured, try again.")
