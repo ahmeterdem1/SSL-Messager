@@ -191,6 +191,22 @@ no duplicate files are downloaded.
 
 Shows the current status; target and if group chat is enabled.
 
+## Error Logging
+
+Now server logs some errors. User caused errors that are non-fatal in nature
+are collected in a single file called UserError.txt. Fatal user errors all have
+their seperate files. Same for the internal server errors. Ip logging is done
+for user errors. Also if possible their last query is logged too. This is for
+debugging purposes. Date and exception types are collected. Usernames and tokens
+are collected. Current server status is collected for fatal user or internal errors.
+This consists of amount of online users, their usernames and amount of threads.
+Future debugging code will come, and this is the beginning of it. A different client
+code just for debugging purposes will be written in the near future. By this way,
+hopefully, amount of non-solved known problems will drop.
+
+Error log files are not posted here. They are created by the server if needed.
+
+
 ## Notes
 
 ### Major security issue solved (22 June 2023)

@@ -13,7 +13,7 @@ group_list = dict()  #list of users toggled group chat
 token = 0
 token_list = dict()  #users coupled with their tokens
 allowed = list("qwertyuopasdfghjklizxcvbnm" + "qwertyuopasdfghjklizxcvbnm".upper() + "1234567890_")
-restricted = ["main.py", "client.py", "user.csv"]  # put the crucial files of the server here
+restricted = ["main.py", "client.py", "user.csv", "UserError.txt"]  # put the crucial files of the server here
 def hash(a: str):
     temp = ""
     for k in a:
@@ -108,6 +108,12 @@ def hash(a: str):
 
     return int(end)
 
+def server_status():
+    th = "Amount of threads: " + str(len(conn_list))  #Amount of threads
+    us = "Amount of users: " + str(len(object_list))
+    ls = "List of users: \n" + "\n".join(list(object_list.keys()))
+    return th + "\n" + us + "\n" + ls
+
 def intro_handler(connection, address):
     global data_list, object_list, conn_list, token_list
     data_list.append(threading.get_ident())
@@ -186,18 +192,22 @@ def handler(con, ip, port, user, t):
     received = 0
     try:
         while True:
-            mes = con.read(4096)
-            mes = str(mes)[2:-1].split(" ")
+            me = con.read(4096)  #changed the name of this so i can log it as the last query
+            mes = str(me)[2:-1].split(" ")
             received = str(mes[-2])
             if received != str(t):
                 break
             if mes[0] == "MSG":
                 if not (mes[1] in conn_list.keys()):
                     con.write(bytes("CNT <user not online> \r\n", "utf-8"))
+                elif mes[2] not in token_list.keys():
+                    break
+                elif token_list[mes[2]] != token_list[user]:
+                    break
                 elif received != str(token_list[mes[2]]):
                     print(mes[2])
                     print(received)
-                    print(token_list[mes[2]])
+                    print(token_list[user])
                     # always check the received username for the token
                     break
                 else:
@@ -205,7 +215,11 @@ def handler(con, ip, port, user, t):
                     object_list[mes[1]].write(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
 
             elif mes[0] == "MSGG":
-                if received != str(token_list[mes[1]]):
+                if mes[1] not in token_list.keys():
+                    break
+                elif token_list[user] != token_list[mes[1]]:
+                    break
+                elif received != str(token_list[user]):
                     break
                 res = " ".join(mes[2:-2])
                 for k in f.keys():
@@ -278,7 +292,7 @@ def handler(con, ip, port, user, t):
                             new_file.write(new_data)
                     con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
                     continue
-                except:
+                except Exception as e:
                     print(e)
                     con.write(bytes("CMD <problem with command> \r\n", "utf-8"))
 
@@ -303,13 +317,19 @@ def handler(con, ip, port, user, t):
             token_list.pop(user)
             conn_list.pop(user)
             date = time.asctime()
+            with open("UserError.txt", "a") as er:
+                er.write("\n----------\n")
+                er.write(f"Incorrect protocol at {date} from {user}\n")
+                er.write(f"User info: {user} | {ip}:{port} | {t}\n")
+                er.write("Last query:\n")
+                er.write(f"{str(me)}\n")
             date = date.split(" ")
             date = " ".join(date[1:-1])
             print(f"<{user} left> -- {date}")
         except:
             pass
 
-    except IndexError:
+    except IndexError as e:
         try:
             object_list[user].close()
         except:
@@ -318,10 +338,15 @@ def handler(con, ip, port, user, t):
         conn_list.pop(user)
         token_list.pop(user)
         date = time.asctime()
+        with open("UserError.txt", "a") as er:
+            er.write("\n----------\n")
+            er.write(f"IndexError: {e} at {date} from {user}\n")
+            er.write(f"User info: {user} | {ip}:{port} | {t}\n")
+            er.write("No query received\n")
         date = date.split(" ")
         date = " ".join(date[1:-1])
         print(f"<{user} left> -- {date}")
-    except ConnectionResetError:
+    except ConnectionResetError as e:
         try:
             object_list[user].close()
         except:
@@ -330,10 +355,15 @@ def handler(con, ip, port, user, t):
         conn_list.pop(user)
         token_list.pop(user)
         date = time.asctime()
+        with open("UserError.txt", "a") as er:
+            er.write("\n----------\n")
+            er.write(f"ConnectionResetError: {e} at {date} from {user}\n")
+            er.write(f"User info: {user} | {ip}:{port} | {t}\n")
+            er.write("No query received\n")
         date = date.split(" ")
         date = " ".join(date[1:-1])
         print(f"<{user} left> -- {date}")
-    except ValueError:
+    except ValueError as e:
         try:
             object_list[user].close()
         except:
@@ -342,10 +372,24 @@ def handler(con, ip, port, user, t):
         conn_list.pop(user)
         token_list.pop(user)
         date = time.asctime()
+        with open("UserError.txt", "a") as er:
+            er.write("\n----------\n")
+            er.write(f"ValueError: {e} at {date} from {user}\n")
+            er.write(f"User info: {user} | {ip}:{port} | {t}\n")
+            er.write("No query received\n")
         date = date.split(" ")
         date = " ".join(date[1:-1])
         print(f"<{user} left> -- {date}")
-    except OSError:
+    except OSError as e:
+        date = time.asctime()
+        # These files will not be reachable with ftp because they have spaces in them
+        # But i added the UserError.txt to the important files list just in case.
+        with open(f"FatalUserError at {date}.txt", "x") as er:
+            er.write(f"OSError: {e} at {date} from {user}\n")
+            er.write(f"User info: {user} | {ip}:{port} | {t}\n")
+            er.write("No query received\n")
+            er.write("Current server status:\n")
+            er.write(server_status())
         for k, v in object_list.items():
             try:
                 v.close()
@@ -353,8 +397,15 @@ def handler(con, ip, port, user, t):
                 pass
         print("<server closing>")
         exit()
-    except RuntimeError:
-        pass
+    except RuntimeError as e:
+        date = time.asctime()
+        with open(f"FatalUserError at {date}.txt", "x") as er:
+            er.write(f"OSError: {e} at {date} from {user}\n")
+            er.write(f"User info: {user} | {ip}:{port} | {t}\n")
+            er.write("No query received\n")
+            er.write("Current server status:\n")
+            er.write(server_status())
+        # Let's not handle it for now
 
 def check():
     global data_list
@@ -374,7 +425,8 @@ def check():
         except RuntimeError:
             pass
 
-
+#  I did not put any logging here because if anything happens, we can just kick the person out.
+#  Literally who cares.
 def put_handler(con, ip, port, control):
     temp_name = str(secrets.randbits(64))
     global conn_list, data_list, object_list, token_list, f
@@ -430,7 +482,7 @@ try:
     context.verify_mode &= ~ssl.CERT_REQUIRED
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-        server.bind(("172.31.19.23", 18443))
+        server.bind(("192.168.1.15", 18443))
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:
@@ -440,11 +492,25 @@ try:
                 threading.Thread(target=intro_handler, args=[conn, addr]).start()
 
 
-except ssl.SSLError:
+except ssl.SSLError as e:
+    date = time.asctime()
+    with open(f"FatalError at {date}.txt", "x") as er:
+        er.write(f"An unexpected error occured at {date}:\n")
+        er.write(f"{e}\n")
+        er.write("----------\n")
+        er.write("Current server status:\n")
+        er.write(server_status())
     print("<TLS connection error>")
     quit()
 except Exception as e:
     print(f"An unexpected error has occured: {e}")
+    date = time.asctime()
+    with open(f"FatalError at {date}.txt", "x") as er:
+        er.write(f"An unexpected error occured at {date}:\n")
+        er.write(f"{e}\n")
+        er.write("----------\n")
+        er.write("Current server status:\n")
+        er.write(server_status())
     try:
         for k, v in object_list.items():
             v.write(bytes("END * <internal server error> \r\n", "utf-8"))
