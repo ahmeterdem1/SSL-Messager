@@ -236,6 +236,15 @@ coupled with server generated tokens. These tokens are checked every time a
 MSG, MSGG or FTP query is received. Therefore all impersonations are prevented
 properly now.
 
+### Major security issue solved (11 August 2023)
+
+This one also requires interfering with the client code. If you delete the splits
+and other operations on filenames and send your file like that, symbols like \, / 
+may be in your file name. This will probably cause a fatal error in the server.
+Or maybe even unintentional folder creations. Now filename is accepted in the
+formatted string form to prevent injection like errors. Also other characters are
+checked and replaced.
+
 ### Known problems
 
 #### Log in / Sign up (partially solved)

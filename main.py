@@ -273,9 +273,12 @@ def handler(con, ip, port, user, t):
                 if received != str(token_list[user]):
                     break
                 filename = mes[2] + "+" + str(secrets.randbits(64)) + mes[1]
+                for k in filename:
+                    if k not in allowed and k != "." and k != "+":
+                        filename = filename.replace(k, "_")
                 #important bug solved here
                 try:
-                    with open(filename, "xb") as new_file:
+                    with open(f"{filename}", "xb") as new_file:
                         begin = time.time()
                         while True:
                             new_data = con.read(4096)
@@ -484,7 +487,7 @@ try:
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         #172.31.19.23
-        server.bind(("172.31.19.23", 18443))
+        server.bind(("192.168.1.15", 18443))
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:
