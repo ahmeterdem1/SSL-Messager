@@ -195,17 +195,26 @@ Shows the current status; target and if group chat is enabled.
 
 Now server logs some errors. User caused errors that are non-fatal in nature
 are collected in a single file called UserError.txt. Fatal user errors all have
-their seperate files. Same for the internal server errors. Ip logging is done
+their separate files. Same for the internal server errors. Ip logging is done
 for user errors. Also if possible their last query is logged too. This is for
 debugging purposes. Date and exception types are collected. Usernames and tokens
 are collected. Current server status is collected for fatal user or internal errors.
 This consists of amount of online users, their usernames and amount of threads.
-Future debugging code will come, and this is the beginning of it. A different client
-code just for debugging purposes will be written in the near future. By this way,
-hopefully, amount of non-solved known problems will drop.
+Future debugging code will come, and this is the beginning of it.
 
 Error log files are not posted here. They are created by the server if needed.
 
+## Debugging
+
+A developper tool has been added now. Method of operation of this is to enter each
+query by hand. If any connection loss happens, client reconnects. This takes some
+time in the code though. Purpose of this client is to analyze the servers response
+in custom inputted circumstances. So far no abnormal response has been observed.
+
+FTP is not supported in this client. Technically yes it can be done. But there is
+no proper loop to collect all the file data nor save it.
+
+Response and write times are logged poorly. It is just for in case.
 
 ## Notes
 
