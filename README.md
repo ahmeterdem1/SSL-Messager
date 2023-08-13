@@ -265,7 +265,7 @@ issue because i didn't want the speed impact of reopening and reclosing the data
 everytime someone signs up. Ideal solution to this is async read-write streams within
 the log in screen thread in the server.
 
-#### Unexpected closing down of the server (being improved)
+#### Unexpected closing down of the server (mostly solved)
 
 Up until this commit, server used to commit suicide after facing the slightest disturbance.
 This was indeed intentional. My first goal was to use my own computer as the server, open
@@ -278,6 +278,9 @@ i use amazons servers instead of my own computer. So more flexible behaviour wil
 to be implemented. I guess my end goal here would be to connect ciphertools and this project
 and to create a fully functional and fully custom tls server. So one day i will turn to using
 my own computer despite all the possible dangers.
+
+In the recent debugging tests, a server shutdown has never been observed. However there was just
+one instance that server kicked everybody but stayed online. The causing error has been identified.
 
 #### Input-Output Mix up
 
@@ -320,14 +323,16 @@ prompt never get displayed. And after 10-20 messages all prompts for them get di
 at the same time in a chain. The solution for this is a gui. Prompt should be a permanent
 label on the screen. Message box should be the only dynamic place.
 
-#### Commands
+#### Commands (solved)
 
-Commands get broken sometimes. This is not about the error message. They just break down
-and never produce a result. Unknown reason, may be due to some malformed query.
+~~Commands get broken sometimes. This is not about the error message. They just break down
+and never produce a result. Unknown reason, may be due to some malformed query.~~
 
-#### Users
+The reason for this problem is the same as below "Users" section. It is now solved.
 
-Whole users get broken sometimes. Their messages start to not show up, their commands break
+#### Users (solved)
+
+~~Whole users get broken sometimes. Their messages start to not show up, their commands break
 down, etc. This was observed after a disturbance in the database. After a user breaks down,
 other users sending messages to that user get affected too because of the RELAY query. This
 results in an error message in the servers terminal, but surprisingly server continues to
@@ -337,7 +342,12 @@ the broken users client sees the connection as intact and continues to function.
 But the "pointer" of the connection socket in the server side is lost. Therefore it is unreachable.
 Client thinks they are online but they are not reachable from the server or by anybody.
 Improving aggressive server action that takes users down the lists when disturbed may be the
-solution.
+solution.~~
+
+The cause has been identified. If you try to log in even if you have never signed up, server
+accepts you. You dont get added to the database though. And you are not reachable for this 
+exact reason. Your messages get displayed. Thankfully this issue is solved now.
+
 
 #### Admin
 
@@ -353,3 +363,36 @@ online even though kicked in reality. No error message or log is generated in th
 logically, there shouldn't be any errors in the server. Server just abruptly saves the file after
 5 seconds then continues to listen normally. I have no idea why this happens. I think we need to
 get rid of the 5 second rule or we need to add a shutdown protocol just like normal ftp.
+
+#### Logging security (Major)
+
+If the user encounters an error that is loggable in the perfect spot, like the AUTH or PUT query
+that would include their password, password gets logged in plain text. That is a major security
+issue. but it is easy to solve.
+
+Still, UserError.txt is in the protected file list. No injection is believed to be able to download
+that file. Yet.
+
+#### Usernames (solved)
+
+Users having names like commands; quit, toggle, etc. may result in problems. ":" character is not
+in the allowed list though.
+
+The reason is the same as above in the "Users" section. It is solved now.
+
+#### Command timing
+
+This only occures for upload-download commands, and results in an OSError. When somebody uploads
+a file to someone else, and this person starts downloading at the same time, the created and still
+being filled file gets deleted. This raises an OSError. Everybody gets kicked but the server 
+continues to function. Probable solution to this is to queue these two commands for target pairs.
+But still, it is very improbable that this will occur. Increased amount of people in the server
+does not increase the probability of this happening. This only happens when the receiver and the
+sender initiates the given commands at the same time. There are always 1 receiver and 1 sender.
+
+#### Uploads
+
+Some file types don't get sent properly. These include .mp4 and .exe files. There may be more.
+Disabling these extensions is the short answer. I have no idea about the proper answer yet.
+
+Probably will disable some other extensions for security reasons, e.g. .bat, .sh, .s, .o, ...

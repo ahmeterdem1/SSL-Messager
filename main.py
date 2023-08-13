@@ -172,7 +172,10 @@ def intro_handler(connection, address):
         connection.write(bytes("END * <user already online> \r\n", "utf-8"))
         connection.close()
     else:
-        token = secrets.randbits(16)
+        connection.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
+        connection.close()
+        # damn else case, i forgot to delete it
+        """token = secrets.randbits(16)
         token_list[mes[1]] = token
         connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
         print("bruh")
@@ -182,7 +185,7 @@ def intro_handler(connection, address):
         print(f"<{mes[1]} accepted> -- {date}")
         conn_list[mes[1]] = threading.Thread(target=handler, args=[connection, address[0], address[1], mes[1], token])
         object_list[mes[1]] = connection
-        conn_list[mes[1]].start()
+        conn_list[mes[1]].start()"""
 
 
 def handler(con, ip, port, user, t):
@@ -487,7 +490,7 @@ try:
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         #172.31.19.23
-        server.bind(("192.168.1.15", 18443))
+        server.bind(("172.31.19.23", 18443))
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:
