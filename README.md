@@ -343,3 +343,13 @@ solution.
 
 There is no admin account nor power. This is intentional. This option will be reconsidered
 after a gui version is created.
+
+#### 5-second limit
+
+This certainly breaks down the users. When trying to upload files larger than the obscure limit
+defined by the 5-second limit, "A problem has occured" message is obtained right before client
+side only disconnection. No disconnect occurs in the server for some reason. User appers as 
+online even though kicked in reality. No error message or log is generated in the server. Indeed
+logically, there shouldn't be any errors in the server. Server just abruptly saves the file after
+5 seconds then continues to listen normally. I have no idea why this happens. I think we need to
+get rid of the 5 second rule or we need to add a shutdown protocol just like normal ftp.
