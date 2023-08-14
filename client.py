@@ -317,11 +317,13 @@ try:
                                 raise KeyboardInterrupt
                     else:
                         if check:
+
                             flag = False
                             username = input("Username: ")
                             password = input("Password: ").replace('\n', '')
                             s.write(bytes(f"PUT {username} {password} \r\n", "utf-8"))
                             mes = s.read(4096)
+                            #print(mes) adding this just made this part of the code work for some reason
                             mes = str(mes)[2:-1].split(" ")
                             if mes[0] == "TRY":
                                 res = " ".join(mes[1:-1])

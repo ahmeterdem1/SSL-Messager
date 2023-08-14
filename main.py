@@ -14,6 +14,7 @@ group_list = dict()  #list of users toggled group chat
 token = 0
 token_list = dict()  #users coupled with their tokens
 allowed = list("qwertyuopasdfghjklizxcvbnm" + "qwertyuopasdfghjklizxcvbnm".upper() + "1234567890_")
+forbidden_usernames = ["quit", "status", "toggle", "admin", "upload", "download", "online", "new_target"]
 restricted = ["main.py", "client.py", "user.csv", "UserError.txt"]  # put the crucial files of the server here
 def hash(a: str):
     temp = ""
@@ -116,7 +117,7 @@ def server_status():
     return th + "\n" + us + "\n" + ls
 
 def intro_handler(connection, address):
-    global data_list, object_list, conn_list, token_list
+    global data_list, object_list, conn_list, token_list, f
     data_list.append(threading.get_ident())
     mes = connection.read(4096)
     mes = str(mes)[2:-1].split(" ")
@@ -128,6 +129,8 @@ def intro_handler(connection, address):
         for a in mes[1]:
             if a not in allowed:
                 c = False
+        if mes[1].lower() in forbidden_usernames:  #so there is no case distinction
+            c = False
         if c:
             with open("user.csv", "a") as file:
                 file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
@@ -144,7 +147,7 @@ def intro_handler(connection, address):
             conn_list[mes[1]].start()
         else:
             threading.Thread(target=put_handler, args=[connection, address[0], address[1], c]).start()
-    elif mes[0] == "PUT":  # mess instead of mes
+    elif mes[0] == "PUT":
         threading.Thread(target=put_handler, args=[connection, address[0], address[1], True]).start()
     #normal log in
     elif mes[1] in f.keys():
@@ -174,7 +177,7 @@ def intro_handler(connection, address):
     else:
         connection.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
         connection.close()
-        # damn else case, i forgot to delete it
+        #  else case, i forgot to delete it
         """token = secrets.randbits(16)
         token_list[mes[1]] = token
         connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
@@ -448,12 +451,15 @@ def put_handler(con, ip, port, control):
                 con.write(bytes("TRY <disallowed characters> \r\n", "utf-8"))
             mess = con.read(4096)
             mess = str(mess)[2:-1].split(" ")
-            for k in mess[1]:
-                if k not in allowed:
-                    control = False
-                    break
-                else:
-                    control = True
+            if mess[1].lower() in forbidden_usernames:
+                control = False
+            else:  #enter this loop only when needed, small optimization
+                for k in mess[1]:
+                    if k not in allowed:
+                        control = False
+                        break
+                    else:
+                        control = True
             if mess[0] == "PUT" and not (mess[1] in f.keys()) and control:
                 with open("user.csv", "a") as x:
                     x.write(f"{str(mess[1])},{str(hash(mess[2]))}\n")
