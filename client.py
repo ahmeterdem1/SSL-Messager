@@ -16,8 +16,10 @@ reset = False
 token = 0
 new_thread = True
 put = False
-group = False #group chat
+group = False  #group chat
 down = False
+permit = False  #permit to start sending files
+not_permitted = False  #if True, automatically ends the while loop that waits
 
 if os.name == "nt":
     os.system("color")
@@ -118,7 +120,7 @@ def hash(a: str):
     return int(end)
 
 def receiver(sock):
-    global flag, thread, reset, check, new_thread, down
+    global flag, thread, reset, check, new_thread, down, permit, not_permitted
     thread = threading.get_ident()
     while True:
         try:
@@ -175,11 +177,9 @@ def receiver(sock):
                     new_file = sock.read(4096)
                     new_file = str(new_file)[2:-1].split(" ")
                     name = new_file[1]
-                    begin = time.time()
                     with open(name, "xb") as save:
                         while True:
                             data = sock.read(4096)
-                            end = time.time()
                             control_data = str(data)[2:-1].split(" ")
                             if len(control_data) >= 4:
                                 if control_data[-2] == "ENDF" and control_data[-3] == "ENDF" and control_data[-4] == "ENDF":
@@ -187,12 +187,14 @@ def receiver(sock):
                                         last_data = bytes(" ".join(control_data[:-4]))
                                         save.write(last_data)
                                     break
-                            elif end - begin > 5:
-                                break
                             save.write(data)
                 down = False
             elif m[0] == "ENDF" or m[0] == "BEGINF":
                 continue
+            elif m[0] == "PROCEED":
+                permit = True
+            elif m[0] == "STOP":
+                not_permitted = True
         except ConnectionResetError:
             pass
         except ValueError:
@@ -271,6 +273,7 @@ try:
                                         elif command == "upload":
                                             path = input("Enter the file path: ")
                                             try:
+                                                size = os.stat(path).st_size
                                                 with open(path, "rb") as up:
                                                     upload = up.read()
                                                     if os.name == "nt" and "\\" in path:
@@ -282,9 +285,18 @@ try:
                                                     else:
                                                         path = path.replace(" ", "_")
                                                         extension = path
-                                                    s.write(bytes(f"BEGINF {extension} {target} {str(token)} \r\n", "utf-8"))
-                                                    s.write(upload)
-                                                    s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
+                                                    s.write(bytes(f"BEGINF {extension} {target} {size} {str(token)} \r\n", "utf-8"))
+                                                    tout = 0  # we set a timeout for this loop
+                                                    while (not permit and tout < 1500) and not not_permitted:
+                                                        tout += 1
+                                                        #  listening is always done in the receiver thread.
+                                                        #  we have a structure that acts like an event listener, permit var is the event flag
+                                                        time.sleep(0.01)
+                                                    if permit:
+                                                        s.write(upload)
+                                                        s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
+                                                    else:
+                                                        print("Upload not permitted")
                                             except:
                                                 print("A problem has occured, try again.")
 
@@ -376,6 +388,7 @@ try:
                                         elif command == "upload":
                                             path = input("Enter the file path: ")
                                             try:
+                                                size = os.stat(path).st_size
                                                 with open(path, "rb") as up:
                                                     upload = up.read()
                                                     if os.name == "nt" and "\\" in path:
@@ -387,9 +400,20 @@ try:
                                                     else:
                                                         path = path.replace(" ", "_")
                                                         extension = path
-                                                    s.write(bytes(f"BEGINF {extension} {target} {str(token)} \r\n", "utf-8"))
-                                                    s.write(upload)
-                                                    s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
+                                                    s.write(
+                                                        bytes(f"BEGINF {extension} {target} {size} {str(token)} \r\n",
+                                                              "utf-8"))
+                                                    tout = 0  # we set a timeout for this loop
+                                                    while (not permit and tout < 1500) and not not_permitted:
+                                                        tout += 1
+                                                        #  listening is always done in the receiver thread.
+                                                        #  we have a structure that acts like an event listener, permit var is the event flag
+                                                        time.sleep(0.01)
+                                                    if permit:
+                                                        s.write(upload)
+                                                        s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
+                                                    else:
+                                                        print("Upload not permitted, file too big")
                                             except:
                                                 print("A problem has occured, try again.")
 

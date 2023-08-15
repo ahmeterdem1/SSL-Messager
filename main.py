@@ -230,6 +230,7 @@ def handler(con, ip, port, user, t):
                     break
                 res = " ".join(mes[2:-2])
                 for k in f.keys():
+                    #  group list is not emptied when someone leaves the server, keep that in mind
                     if k != mes[1] and (k in object_list.keys()) and group_list[k]:
                         object_list[k].write(bytes(f"RELAYG {mes[1]} {res} \r\n", "utf-8"))
 
@@ -278,18 +279,37 @@ def handler(con, ip, port, user, t):
             elif mes[0] == "BEGINF":
                 if received != str(token_list[user]):
                     break
+                declared_size = int(mes[3])
+                if declared_size > 10000000:  #  max file size is 10mb
+                    con.write(bytes("STOP <size too big> \r\n", "utf-8"))
+                    continue
                 filename = mes[2] + "+" + str(secrets.randbits(64)) + mes[1]
                 for k in filename:
                     if k not in allowed and k != "." and k != "+":
                         filename = filename.replace(k, "_")
+
+                con.write(bytes("PROCEED \r\n", "utf-8"))
                 #important bug solved here
                 try:
                     with open(f"{filename}", "xb") as new_file:
-                        begin = time.time()
+                        measured_size = 0
                         while True:
                             new_data = con.read(4096)
+                            measured_size += 4096
+                            #  A kilobyte of margin is left
+                            if measured_size > declared_size + 4096*2:
+                                con.write(bytes("END <incorrect size declaration> \r\n", "utf-8"))
+                                object_list[user].close()
+                                object_list.pop(user)
+                                token_list.pop(user)
+                                conn_list.pop(user)
+                                date = time.asctime()
+                                date = date.split(" ")
+                                date = " ".join(date[1:-1])
+                                print(f"<{user} left> -- {date}")
+                                os.remove(f"{filename}")
+                                return
                             str_data = str(new_data)[2:-1].split(" ")
-                            end = time.time()
                             if len(str_data) >= 3:
                                 if str_data[-3] == "ENDF" and str_data[-2] == str(t):
                                     if not len(str_data) == 3:
@@ -297,8 +317,6 @@ def handler(con, ip, port, user, t):
                                         new_file.write(last_data)
                                     break
 
-                            if end - begin > 5:
-                                break
                             new_file.write(new_data)
                     con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
                     continue

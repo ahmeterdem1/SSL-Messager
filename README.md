@@ -98,23 +98,35 @@ Server replies with:
 Transmission of any file is surrounded by queries. For client and server,
 these queries may differ but indeed the system is the same.
 
+Regulation exists when sending data to the server but not vice versa.
+
 When client starts file transmission:
 
-`BEGINF filename.extension target token \r\n`
+`BEGINF filename.extension target size token \r\n`
 
 Since files are uploaded for another user, target is needed.
 Server gets the filename and extension from this query. Server
 saves the file as _target+filename.extension_.
 
+Server checks the size of the file and permits the user if it is
+below the threshold. If below:
+
+`PROCEED \r\n`
+
+If not:
+
+`STOP <size too big> \r\n`
+
+If allowed clients starts sending the data. Server receives this data
+by 4kb packets and measures the size during. If the measured size is
+bigger than the declared size + 8kb, then server just kicks the user.
+The reason for this kick is that, the only way that this could occur
+is that, client has changed their code and therefore lied on transmission.
+Lying to the server is the ultimate sin here.
+
 Client sends the following query after its transmission ends:
 
 `ENDF token \r\n`
-
-Server expects that any file transmission ends within 5 seconds.
-This naturally limits the allowed data per file. If this limit is
-reached, file is still saved with so far sent data, but it will be
-incomplete and probably unreadable. This limit is for practical reasons.
-This is just a basic messaging app with some essential features.
 
 After server receives and saves all the data, responds to indicate completion:
 
@@ -135,6 +147,11 @@ there may be multiple files to send:
 
 `BEGIN amount_of_files \r\n`
 
+Here is the important thing, there is no transmission control in servers ftp.
+The reason that there is regulation in sending data to the server is that,
+server should decide if it trusts the client. But server already trusts the
+server. So, client should trust the server too.
+
 Client gets the information on amount of files to receive from this query. After that,
 server applies the same method as client, except:
 
@@ -144,7 +161,12 @@ This tripple "ENDF" is to prevent bugs arising from within the file data. It is 
 probable that the sent data chuck not intended to be the last has the same format as this.
 "\r\n" part is not checked, but is assumed to be there while indexing.
 
-File names are sent in raw form, without the "target+" part. Same 5 second principle is used.
+File names are sent in raw form, without the "target+" part.
+
+5 second limit is disabled. A TCP-like regulation is added instead.
+
+Keep in mind that, upload is a blocking code for input. In the future, FTP will be carried
+to a different socket than the message protocol.
 
 
 ### Important notes on the protocol
@@ -354,7 +376,7 @@ exact reason. Your messages get displayed. Thankfully this issue is solved now.
 There is no admin account nor power. This is intentional. This option will be reconsidered
 after a gui version is created.
 
-#### 5-second limit
+#### 5-second limit (solved, limit disabled)
 
 This certainly breaks down the users. When trying to upload files larger than the obscure limit
 defined by the 5-second limit, "A problem has occured" message is obtained right before client
