@@ -100,6 +100,12 @@ these queries may differ but indeed the system is the same.
 
 Regulation exists when sending data to the server but not vice versa.
 
+Before each FTP action, server checks the queue. If at the same time a file
+is being uploaded to that user, it does not permit downloads to that user.
+Same goes for vice versa. If someone tries to upload to somebody and that
+user is downloading at the same time, upload is not permitted. These are
+declared with stop queries.
+
 When client starts file transmission:
 
 `BEGINF filename.extension target size token \r\n`
@@ -402,7 +408,7 @@ in the allowed list though.
 
 The reason is the same as above in the "Users" section. It is solved now.
 
-#### Command timing
+#### Command timing (solved)
 
 This only occures for upload-download commands, and results in an OSError. When somebody uploads
 a file to someone else, and this person starts downloading at the same time, the created and still

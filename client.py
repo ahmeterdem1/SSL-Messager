@@ -20,6 +20,7 @@ group = False  #group chat
 down = False
 permit = False  #permit to start sending files
 not_permitted = False  #if True, automatically ends the while loop that waits
+down_permit = True
 
 if os.name == "nt":
     os.system("color")
@@ -194,7 +195,11 @@ def receiver(sock):
             elif m[0] == "PROCEED":
                 permit = True
             elif m[0] == "STOP":
+                res = " ".join(m[1:-1])
+                print()
+                print(f"{res}")
                 not_permitted = True
+                down_permit = False
         except ConnectionResetError:
             pass
         except ValueError:
@@ -301,8 +306,9 @@ try:
                                                 print("A problem has occured, try again.")
 
                                         elif command == "download":
+                                            down_permit = True
                                             s.write(bytes(f"CMD <get> {token} \r\n", "utf-8"))
-                                            while True:
+                                            while down_permit:
                                                 time.sleep(0.1)
                                                 if not down:
                                                     break
@@ -418,8 +424,9 @@ try:
                                                 print("A problem has occured, try again.")
 
                                         elif command == "download":
+                                            down_permit = True
                                             s.write(bytes(f"CMD <get> {token} \r\n", "utf-8"))
-                                            while True:
+                                            while down_permit:
                                                 time.sleep(0.1)
                                                 if not down:
                                                     break

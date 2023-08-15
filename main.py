@@ -16,7 +16,42 @@ token_list = dict()  #users coupled with their tokens
 allowed = list("qwertyuopasdfghjklizxcvbnm" + "qwertyuopasdfghjklizxcvbnm".upper() + "1234567890_")
 forbidden_usernames = ["quit", "status", "toggle", "admin", "upload", "download", "online", "new_target"]
 restricted = ["main.py", "client.py", "user.csv", "UserError.txt"]  # put the crucial files of the server here
+allowance = dict()  #  upload download collisions are prevented with this
+
+def kick(user: str):
+    """
+
+    :param user: Assigned username obtained by AUTH
+    :return: Returns nothing
+
+    Better designing and structuring of code.
+    I left the replaced code as comments so that i
+    can roll back rapidly in case.
+    """
+    global object_list, conn_list, token_list, group_list
+    try:
+        object_list[user].close()
+    except:
+        print(f"<connection did not close for {user} - proceeding to empty from database>")
+    object_list.pop(user)
+    conn_list.pop(user)
+    token_list.pop(user)
+    group_list.pop(user)
+    date = time.asctime()
+    date = date.split(" ")
+    date = " ".join(date[1:-1])
+    print(f"<{user} left> -- {date}")
+
 def hash(a: str):
+    """
+
+    :param a: String
+    :return: Hash
+
+    A custom code of an md5-like hash. It is important because built-in
+    hash's internal state changes every time you start up the program.
+    It is crucial for it to remain the same always.
+    """
     temp = ""
     for k in a:
         temp += str(bin(ord(k)))
@@ -111,12 +146,29 @@ def hash(a: str):
     return int(end)
 
 def server_status():
+    """
+
+    :return: Returns the server log
+
+    Just logs the servers current state. This is for debugging
+    purposes.
+    """
     th = "Amount of threads: " + str(len(conn_list))  #Amount of threads
     us = "Amount of users: " + str(len(object_list))
     ls = "List of users: \n" + "\n".join(list(object_list.keys()))
     return th + "\n" + us + "\n" + ls
 
 def intro_handler(connection, address):
+    """
+
+    :param connection: SSLSocket object of the accepted connection
+    :param address: ip-port tuple
+    :return: Returns nothing
+
+    This is the welcome function of the server. Runs one cycle only.
+    Then either cedes to handler, put_hanler or kicks the user and
+    returns.
+    """
     global data_list, object_list, conn_list, token_list, f
     data_list.append(threading.get_ident())
     mes = connection.read(4096)
@@ -192,7 +244,19 @@ def intro_handler(connection, address):
 
 
 def handler(con, ip, port, user, t):
-    global conn_list, data_list, object_list, group_list, token_list
+    """
+    :param con: Client connection object as SSLSocket
+    :param ip: Client ip
+    :param port: Client port
+    :param user: Assigned username obtained by AUTH
+    :param t: Assigned token for the user
+    :return: Returns nothing
+
+    Handles everything about the user specified by arguments.
+    Does both receiving sending messages. This function is
+    called within another thread after user logs in or signs up.
+    """
+    global conn_list, data_list, object_list, group_list, token_list, allowance
     data_list.append(threading.get_ident())
     group_list[user] = False
     address = (ip, port)
@@ -212,9 +276,6 @@ def handler(con, ip, port, user, t):
                 elif token_list[mes[2]] != token_list[user]:
                     break
                 elif received != str(token_list[mes[2]]):
-                    print(mes[2])
-                    print(received)
-                    print(token_list[user])
                     # always check the received username for the token
                     break
                 else:
@@ -240,6 +301,10 @@ def handler(con, ip, port, user, t):
                     res = " ".join(l[:100])  # sends only the first 100 people online
                     con.write(bytes(f"CMD <{res}> \r\n", "utf-8"))
                 elif mes[1] == "<get>":
+                    if allowance[user] != 0:
+                        con.write(bytes("STOP <collision detected - wait for a moment before trying again> \r\n", "utf-8"))
+                        continue
+                    allowance[user] += 1  # Allowance increased
                     file_list = list()
                     with os.popen(f"ls | grep '{user}+'") as sub:  # we put username in grep, beware of injections
                         file_list = [k.replace("\n", "") for k in sub.readlines()]
@@ -257,6 +322,7 @@ def handler(con, ip, port, user, t):
                             con.write(data)
                             con.write(bytes("ENDF ENDF ENDF \r\n", "utf-8"))
                     con.write(bytes("CMD <file send complete> \r\n", "utf-8"))
+                    allowance[user] -= 1  #  Allowance decreased
                     for k in file_list:
                         os.remove(k)
                 elif mes[1] == "<group>":
@@ -264,7 +330,8 @@ def handler(con, ip, port, user, t):
 
             elif mes[0] == "END":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
-                try:
+                kick(user)
+                """try:
                     object_list[user].close()
                 except:
                     pass
@@ -273,10 +340,13 @@ def handler(con, ip, port, user, t):
                 date = time.asctime()
                 date = date.split(" ")
                 date = " ".join(date[1:-1])
-                print(f"<{user} left> -- {date}")
+                print(f"<{user} left> -- {date}")"""
                 break
 
             elif mes[0] == "BEGINF":
+                if allowance[mes[2]] != 0:
+                    con.write(bytes("STOP <collision detected - wait for a moment before trying again> \r\n", "utf-8"))
+                    continue
                 if received != str(token_list[user]):
                     break
                 declared_size = int(mes[3])
@@ -290,23 +360,27 @@ def handler(con, ip, port, user, t):
 
                 con.write(bytes("PROCEED \r\n", "utf-8"))
                 #important bug solved here
+                decreased = False
                 try:
                     with open(f"{filename}", "xb") as new_file:
                         measured_size = 0
+                        allowance[mes[2]] += 1  # Allowance increased
                         while True:
                             new_data = con.read(4096)
                             measured_size += 4096
-                            #  A kilobyte of margin is left
+                            #  8 kilobytes of margin is left
                             if measured_size > declared_size + 4096*2:
                                 con.write(bytes("END <incorrect size declaration> \r\n", "utf-8"))
-                                object_list[user].close()
+                                kick(user)
+                                allowance[mes[2]] -= 1
+                                """object_list[user].close()
                                 object_list.pop(user)
                                 token_list.pop(user)
                                 conn_list.pop(user)
                                 date = time.asctime()
                                 date = date.split(" ")
                                 date = " ".join(date[1:-1])
-                                print(f"<{user} left> -- {date}")
+                                print(f"<{user} left> -- {date}")"""
                                 os.remove(f"{filename}")
                                 return
                             str_data = str(new_data)[2:-1].split(" ")
@@ -319,31 +393,38 @@ def handler(con, ip, port, user, t):
 
                             new_file.write(new_data)
                     con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
+                    allowance[mes[2]] -= 1
+                    decreased = True
                     continue
                 except Exception as e:
+                    if not decreased:
+                        allowance[mes[2]] -= 1
+                        decreased = True
                     print(e)
                     con.write(bytes("CMD <problem with command> \r\n", "utf-8"))
 
             else:
                 try:
                     object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
-                    object_list[user].close()
+                    #object_list[user].close()
                 except:
                     pass
-                object_list.pop(user)
+                kick(user)
+                """object_list.pop(user)
                 conn_list.pop(user)
                 date = time.asctime()
                 date = date.split(" ")
                 date = " ".join(date[1:-1])
-                print(f"<{user} left> -- {date}")
+                print(f"<{user} left> -- {date}")"""
                 break
         # out of the loop
         try:
             object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
-            object_list[user].close()
+            """object_list[user].close()
             object_list.pop(user)
             token_list.pop(user)
-            conn_list.pop(user)
+            conn_list.pop(user)"""
+            kick(user)
             date = time.asctime()
             with open("UserError.txt", "a") as er:
                 er.write("\n----------\n")
@@ -351,63 +432,66 @@ def handler(con, ip, port, user, t):
                 er.write(f"User info: {user} | {ip}:{port} | {t}\n")
                 er.write("Last query:\n")
                 er.write(f"{str(me)}\n")
-            date = date.split(" ")
+            """date = date.split(" ")
             date = " ".join(date[1:-1])
-            print(f"<{user} left> -- {date}")
+            print(f"<{user} left> -- {date}")"""
         except:
             pass
 
     except IndexError as e:
-        try:
+        kick(user)
+        """try:
             object_list[user].close()
         except:
             pass
         object_list.pop(user)
         conn_list.pop(user)
-        token_list.pop(user)
+        token_list.pop(user)"""
         date = time.asctime()
         with open("UserError.txt", "a") as er:
             er.write("\n----------\n")
             er.write(f"IndexError: {e} at {date} from {user}\n")
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
-        date = date.split(" ")
+        """date = date.split(" ")
         date = " ".join(date[1:-1])
-        print(f"<{user} left> -- {date}")
+        print(f"<{user} left> -- {date}")"""
     except ConnectionResetError as e:
-        try:
+        kick(user)
+        """try:
             object_list[user].close()
         except:
             pass
         object_list.pop(user)
         conn_list.pop(user)
-        token_list.pop(user)
+        token_list.pop(user)"""
         date = time.asctime()
         with open("UserError.txt", "a") as er:
             er.write("\n----------\n")
             er.write(f"ConnectionResetError: {e} at {date} from {user}\n")
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
-        date = date.split(" ")
+        """date = date.split(" ")
         date = " ".join(date[1:-1])
-        print(f"<{user} left> -- {date}")
+        print(f"<{user} left> -- {date}")"""
     except ValueError as e:
-        try:
+        kick(user)
+        """try:
             object_list[user].close()
         except:
             pass
         object_list.pop(user)
         conn_list.pop(user)
-        token_list.pop(user)
+        token_list.pop(user)"""
         date = time.asctime()
         with open("UserError.txt", "a") as er:
             er.write("\n----------\n")
             er.write(f"ValueError: {e} at {date} from {user}\n")
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
-        date = date.split(" ")
+        """date = date.split(" ")
         date = " ".join(date[1:-1])
-        print(f"<{user} left> -- {date}")
+        print(f"<{user} left> -- {date}")"""
     except OSError as e:
         date = time.asctime()
         # These files will not be reachable with ftp because they have spaces in them
@@ -436,6 +520,13 @@ def handler(con, ip, port, user, t):
         # Let's not handle it for now
 
 def check():
+    """
+
+    :return: Returns nothing
+
+    Closes down broken connections that got left open on the
+    server side. Some sort of DDoS prevention code.
+    """
     global data_list
     data_list.append(threading.get_ident())
     while True:
@@ -456,6 +547,18 @@ def check():
 #  I did not put any logging here because if anything happens, we can just kick the person out.
 #  Literally who cares.
 def put_handler(con, ip, port, control):
+    """
+
+    :param con: SSLSocket object of the accepted connection
+    :param ip: ip of the client
+    :param port: port of the user
+    :param control: Internal server parameter
+    :return: Returns nothing
+
+    This function manages the signup process. Every user gets 60
+    trials. This is to prevent DDoS. Either cedes to handler or
+    kicks the user and returns.
+    """
     temp_name = str(secrets.randbits(64))
     global conn_list, data_list, object_list, token_list, f
     data_list.append(threading.get_ident())
@@ -506,7 +609,10 @@ def put_handler(con, ip, port, control):
 try:
     with open("user.csv", "r") as file:
         lines = file.readlines()
+        #  Some compilers for some reason put an empty string at the end of this
+        lines = list(filter(lambda x: x != "", lines))
         f = {k.split(",")[0]: k.split(",")[1].replace("\n", "") for k in lines}
+        allowance = {k: 0 for k in f.keys()}
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain("../cert.pem", "../cert.pem")
