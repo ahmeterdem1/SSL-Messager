@@ -219,6 +219,38 @@ no duplicate files are downloaded.
 
 Shows the current status; target and if group chat is enabled.
 
+## Admin
+
+Admin in this system is not an account. It is just a thread in the server side.
+This thread takes input from the user, then acts accordingly. There are 6 commands
+in order to moderate and debug.
+
+### /online
+
+Same as :online: in the client side.
+
+### /kick _target_
+
+Kicks the intended user.
+
+### /ban _target_
+
+Ip bans the intended user and kicks them. Banned ip's are stored in the banned.csv
+file. This file is read everytime server is started.
+
+### /msg _target_ _message_
+
+Sends message to the target with "admin" as the name. This name is forbidden as a
+client account name.
+
+### /g _message_
+
+Sends the message to the group chat.
+
+### /s
+
+Prints the current server status. This is for debug purposes.
+
 ## Error Logging
 
 Now server logs some errors. User caused errors that are non-fatal in nature
@@ -317,6 +349,9 @@ one people are texting at the same time, output of a received message will inter
 input take. A gui solution is required for that. In action, this becomes kind of annoying
 but not that much of a problem.
 
+Indeed if you just ignore the interruption and continue to write then press enter, your whole
+message gets sent properly. So, not that much of a problem again.
+
 #### FTP (solved, bug fixed)
 
 FTP is a problem itself. I have coded it very poorly because i got lazy. It is basically
@@ -332,12 +367,14 @@ did not download it yet, if you try to upload it again, server raises an OSError
 down because there exists a file with the same name. Now a 64-bit random number string is
 added to the name.
 
-#### Database itself
+#### Database itself (solved)
 
 Database sometimes breakes down for some reason. Empty lines may generate in the csv file.
 Users get saved in the database without problems but an error in the client side may
 result in a malformed query and this query results in a broken database in the server-side.
 Whole file system of this structure will get an update.
+
+A filter function is added to solve this.
 
 #### Character set
 
@@ -377,7 +414,7 @@ accepts you. You dont get added to the database though. And you are not reachabl
 exact reason. Your messages get displayed. Thankfully this issue is solved now.
 
 
-#### Admin
+#### Admin (solved)
 
 There is no admin account nor power. This is intentional. This option will be reconsidered
 after a gui version is created.
@@ -424,3 +461,7 @@ Some file types don't get sent properly. These include .mp4 and .exe files. Ther
 Disabling these extensions is the short answer. I have no idea about the proper answer yet.
 
 Probably will disable some other extensions for security reasons, e.g. .bat, .sh, .s, .o, ...
+
+Also for some reason "Bad file descriptor" error is obtained somewhat frequently in large file
+uploads-downloads. The reason is yet unknown. But the servers aggresive response to exceptions
+has been modeerated to prevent further errors resulting from other errors.

@@ -5,6 +5,7 @@ import threading
 import signal
 import os
 import secrets
+import sys
 
 #192.168.1.15
 conn_list = dict()  #contains the threads
@@ -15,8 +16,10 @@ token = 0
 token_list = dict()  #users coupled with their tokens
 allowed = list("qwertyuopasdfghjklizxcvbnm" + "qwertyuopasdfghjklizxcvbnm".upper() + "1234567890_")
 forbidden_usernames = ["quit", "status", "toggle", "admin", "upload", "download", "online", "new_target"]
-restricted = ["main.py", "client.py", "user.csv", "UserError.txt"]  # put the crucial files of the server here
+restricted = ["main.py", "client.py", "user.csv", "UserError.txt", "banned.csv"]  # put the crucial files of the server here
 allowance = dict()  #  upload download collisions are prevented with this
+ip_list = dict()  #  this is for managing bans only
+admin_command_list = ["online", "kick", "ban", "msg", "g", "s"]
 
 def kick(user: str):
     """
@@ -28,7 +31,7 @@ def kick(user: str):
     I left the replaced code as comments so that i
     can roll back rapidly in case.
     """
-    global object_list, conn_list, token_list, group_list
+    global object_list, conn_list, token_list, group_list, allowance, user_thread_list
     try:
         object_list[user].close()
     except:
@@ -37,6 +40,8 @@ def kick(user: str):
     conn_list.pop(user)
     token_list.pop(user)
     group_list.pop(user)
+    ip_list.pop(user)
+    allowance.pop(user)
     date = time.asctime()
     date = date.split(" ")
     date = " ".join(date[1:-1])
@@ -169,7 +174,7 @@ def intro_handler(connection, address):
     Then either cedes to handler, put_hanler or kicks the user and
     returns.
     """
-    global data_list, object_list, conn_list, token_list, f
+    global data_list, object_list, conn_list, token_list, f, allowance
     data_list.append(threading.get_ident())
     mes = connection.read(4096)
     mes = str(mes)[2:-1].split(" ")
@@ -183,12 +188,15 @@ def intro_handler(connection, address):
                 c = False
         if mes[1].lower() in forbidden_usernames:  #so there is no case distinction
             c = False
+        if len(mes[1]) > 15:
+            c = False
         if c:
             with open("user.csv", "a") as file:
                 file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
             f[mes[1]] = str(hash(mes[2]))  # appends the data to the ram
             token = secrets.randbits(16)
             token_list[mes[1]] = token
+            allowance[mes[1]] = 0
             connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
             date = time.asctime()
             date = date.split(" ")
@@ -214,6 +222,7 @@ def intro_handler(connection, address):
         else:
             token = secrets.randbits(16)
             token_list[mes[1]] = token
+            allowance[mes[1]] = 0
             connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
             date = time.asctime()
             date = date.split(" ")
@@ -229,18 +238,6 @@ def intro_handler(connection, address):
     else:
         connection.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
         connection.close()
-        #  else case, i forgot to delete it
-        """token = secrets.randbits(16)
-        token_list[mes[1]] = token
-        connection.write(bytes(f"ACCEPT {mes[1]} {token} \r\n", "utf-8"))
-        print("bruh")
-        date = time.asctime()
-        date = date.split(" ")
-        date = " ".join(date[1:-1])
-        print(f"<{mes[1]} accepted> -- {date}")
-        conn_list[mes[1]] = threading.Thread(target=handler, args=[connection, address[0], address[1], mes[1], token])
-        object_list[mes[1]] = connection
-        conn_list[mes[1]].start()"""
 
 
 def handler(con, ip, port, user, t):
@@ -256,9 +253,10 @@ def handler(con, ip, port, user, t):
     Does both receiving sending messages. This function is
     called within another thread after user logs in or signs up.
     """
-    global conn_list, data_list, object_list, group_list, token_list, allowance
+    global conn_list, data_list, object_list, group_list, token_list, allowance, ip_list
     data_list.append(threading.get_ident())
     group_list[user] = False
+    ip_list[user] = ip
     address = (ip, port)
     received = 0
     try:
@@ -331,16 +329,6 @@ def handler(con, ip, port, user, t):
             elif mes[0] == "END":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
                 kick(user)
-                """try:
-                    object_list[user].close()
-                except:
-                    pass
-                object_list.pop(user)
-                conn_list.pop(user)
-                date = time.asctime()
-                date = date.split(" ")
-                date = " ".join(date[1:-1])
-                print(f"<{user} left> -- {date}")"""
                 break
 
             elif mes[0] == "BEGINF":
@@ -350,7 +338,7 @@ def handler(con, ip, port, user, t):
                 if received != str(token_list[user]):
                     break
                 declared_size = int(mes[3])
-                if declared_size > 10000000:  #  max file size is 10mb
+                if declared_size > 5000000:  #  max file size is 10mb
                     con.write(bytes("STOP <size too big> \r\n", "utf-8"))
                     continue
                 filename = mes[2] + "+" + str(secrets.randbits(64)) + mes[1]
@@ -373,14 +361,6 @@ def handler(con, ip, port, user, t):
                                 con.write(bytes("END <incorrect size declaration> \r\n", "utf-8"))
                                 kick(user)
                                 allowance[mes[2]] -= 1
-                                """object_list[user].close()
-                                object_list.pop(user)
-                                token_list.pop(user)
-                                conn_list.pop(user)
-                                date = time.asctime()
-                                date = date.split(" ")
-                                date = " ".join(date[1:-1])
-                                print(f"<{user} left> -- {date}")"""
                                 os.remove(f"{filename}")
                                 return
                             str_data = str(new_data)[2:-1].split(" ")
@@ -406,24 +386,13 @@ def handler(con, ip, port, user, t):
             else:
                 try:
                     object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
-                    #object_list[user].close()
                 except:
                     pass
                 kick(user)
-                """object_list.pop(user)
-                conn_list.pop(user)
-                date = time.asctime()
-                date = date.split(" ")
-                date = " ".join(date[1:-1])
-                print(f"<{user} left> -- {date}")"""
                 break
         # out of the loop
         try:
             object_list[mes[1]].send(bytes("END * <incorrect protocol> \r\n", "utf-8"))
-            """object_list[user].close()
-            object_list.pop(user)
-            token_list.pop(user)
-            conn_list.pop(user)"""
             kick(user)
             date = time.asctime()
             with open("UserError.txt", "a") as er:
@@ -432,67 +401,38 @@ def handler(con, ip, port, user, t):
                 er.write(f"User info: {user} | {ip}:{port} | {t}\n")
                 er.write("Last query:\n")
                 er.write(f"{str(me)}\n")
-            """date = date.split(" ")
-            date = " ".join(date[1:-1])
-            print(f"<{user} left> -- {date}")"""
         except:
             pass
 
     except IndexError as e:
+        object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
         kick(user)
-        """try:
-            object_list[user].close()
-        except:
-            pass
-        object_list.pop(user)
-        conn_list.pop(user)
-        token_list.pop(user)"""
         date = time.asctime()
         with open("UserError.txt", "a") as er:
             er.write("\n----------\n")
             er.write(f"IndexError: {e} at {date} from {user}\n")
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
-        """date = date.split(" ")
-        date = " ".join(date[1:-1])
-        print(f"<{user} left> -- {date}")"""
     except ConnectionResetError as e:
+        object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
         kick(user)
-        """try:
-            object_list[user].close()
-        except:
-            pass
-        object_list.pop(user)
-        conn_list.pop(user)
-        token_list.pop(user)"""
         date = time.asctime()
         with open("UserError.txt", "a") as er:
             er.write("\n----------\n")
             er.write(f"ConnectionResetError: {e} at {date} from {user}\n")
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
-        """date = date.split(" ")
-        date = " ".join(date[1:-1])
-        print(f"<{user} left> -- {date}")"""
     except ValueError as e:
+        object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
         kick(user)
-        """try:
-            object_list[user].close()
-        except:
-            pass
-        object_list.pop(user)
-        conn_list.pop(user)
-        token_list.pop(user)"""
         date = time.asctime()
         with open("UserError.txt", "a") as er:
             er.write("\n----------\n")
             er.write(f"ValueError: {e} at {date} from {user}\n")
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
-        """date = date.split(" ")
-        date = " ".join(date[1:-1])
-        print(f"<{user} left> -- {date}")"""
     except OSError as e:
+        object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
         date = time.asctime()
         # These files will not be reachable with ftp because they have spaces in them
         # But i added the UserError.txt to the important files list just in case.
@@ -502,13 +442,10 @@ def handler(con, ip, port, user, t):
             er.write("No query received\n")
             er.write("Current server status:\n")
             er.write(server_status())
-        for k, v in object_list.items():
-            try:
-                v.close()
-            except:
-                pass
-        print("<server closing>")
-        exit()
+        try:
+            kick(user)
+        except:
+            pass
     except RuntimeError as e:
         date = time.asctime()
         with open(f"FatalUserError at {date}.txt", "x") as er:
@@ -544,6 +481,43 @@ def check():
         except RuntimeError:
             pass
 
+def admin():
+    while True:
+        print("Enter your command: ", end="")
+        cmd = sys.stdin.readline(4096)
+        #print(cmd)
+        cmd = str(cmd).replace("\n", "")
+        if cmd[0] == "/":
+            cmd = cmd[1:]
+            cmd = cmd.split(" ")
+            if cmd[0] == "online":
+                print("<", end="")
+                print(" ".join(list(object_list.keys())), end="")
+                print(">")
+            elif cmd[0] == "kick":
+                user = cmd[1]
+                object_list[user].write(bytes("END <you are being kicked> \r\n", "utf-8"))
+                kick(user)
+            elif cmd[0] == "ban":
+                user = cmd[1]
+                ip = ip_list[user]
+                with open("banned.csv", "a") as file:
+                    file.write(str(ip) + "\n")
+                object_list[user].write(bytes("END <you are banned> \r\n", "utf-8"))
+                kick(user)
+            elif cmd[0] == "msg":
+                user = cmd[1]
+                mes = " ".join(cmd[2:])
+                print(mes)
+                object_list[user].write(bytes(f"RELAY {user} admin {mes}... \r\n", "utf-8"))
+            elif cmd[0] == "g":
+                mes = " ".join(cmd[1:])
+                for k, v in object_list.items():
+                    v.write(bytes(f"RELAYG {k} admin {mes}... \r\n", "utf-8"))
+            elif cmd[0] == "s":
+                print(server_status())
+
+
 #  I did not put any logging here because if anything happens, we can just kick the person out.
 #  Literally who cares.
 def put_handler(con, ip, port, control):
@@ -560,7 +534,7 @@ def put_handler(con, ip, port, control):
     kicks the user and returns.
     """
     temp_name = str(secrets.randbits(64))
-    global conn_list, data_list, object_list, token_list, f
+    global conn_list, data_list, object_list, token_list, f, allowance
     data_list.append(threading.get_ident())
     object_list[temp_name] = con
     try:
@@ -569,9 +543,11 @@ def put_handler(con, ip, port, control):
             if control:
                 con.write(bytes("TRY <username already taken> \r\n", "utf-8"))
             else:
-                con.write(bytes("TRY <disallowed characters> \r\n", "utf-8"))
+                con.write(bytes("TRY <disallowed characters or length> \r\n", "utf-8"))
             mess = con.read(4096)
             mess = str(mess)[2:-1].split(" ")
+            if len(mess[1]) > 15:
+                control = False
             if mess[1].lower() in forbidden_usernames:
                 control = False
             else:  #enter this loop only when needed, small optimization
@@ -587,6 +563,7 @@ def put_handler(con, ip, port, control):
                 f[mess[1]] = str(hash(mess[2]))  # appends the data to the ram
                 token = secrets.randbits(16)
                 token_list[mess[1]] = token
+                allowance[mess[1]] = 0
                 con.write(bytes(f"ACCEPT {mess[1]} {token} \r\n", "utf-8"))
                 date = time.asctime()
                 date = date.split(" ")
@@ -612,7 +589,13 @@ try:
         #  Some compilers for some reason put an empty string at the end of this
         lines = list(filter(lambda x: x != "", lines))
         f = {k.split(",")[0]: k.split(",")[1].replace("\n", "") for k in lines}
-        allowance = {k: 0 for k in f.keys()}
+        #  allowance = {k: 0 for k in f.keys()}
+        #  now this is created on users login
+
+    with open("banned.csv", "r") as file:
+        bans = file.readlines()
+    bans = list(map(lambda x: x.replace("\n", ""), bans))
+
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain("../cert.pem", "../cert.pem")
@@ -624,10 +607,19 @@ try:
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:
-            threading.Thread(target=check).start()
+            # threading.Thread(target=check).start()
+            """
+            Check function will be disabled for now. It causes many problems in
+            client-server talk
+            """
+            threading.Thread(target=admin).start()
             while True:
                 conn, addr = secure_server.accept()
-                threading.Thread(target=intro_handler, args=[conn, addr]).start()
+                print(bans)
+                if str(addr[0]) in bans:
+                    conn.close()
+                else:
+                    threading.Thread(target=intro_handler, args=[conn, addr]).start()
 
 
 except ssl.SSLError as e:

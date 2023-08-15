@@ -121,7 +121,7 @@ def hash(a: str):
     return int(end)
 
 def receiver(sock):
-    global flag, thread, reset, check, new_thread, down, permit, not_permitted
+    global flag, thread, reset, check, new_thread, down, permit, not_permitted, down_permit
     thread = threading.get_ident()
     while True:
         try:
@@ -205,9 +205,36 @@ def receiver(sock):
         except ValueError:
             print("\033[91m <server closed> \x1b[0m")
             break
-        except OSError:
+        except socket.timeout:
+            pass
+        """except OSError:
             print("\033[91m <program ending> \x1b[0m")
-            break
+            break"""
+
+
+def put_reader(s):
+    global check, token
+
+    mes = s.read(4096)
+    #print(mes)  # adding this just made this part of the code work for some reason
+    mes = str(mes)[2:-1].split(" ")
+    if mes[0] == "TRY":
+        res = " ".join(mes[1:-1])
+        print()
+        print(res)
+        #continue
+    elif mes[0] == "END":
+        res = " ".join(mes[1:-1])
+        print()
+        print(res)
+        raise KeyboardInterrupt
+    elif mes[0] == "ACCEPT":
+        token = mes[-2]
+        print("<log in complete>")
+        check = False
+    elif mes[0] == "CHECK":
+        return put_reader(s)
+
 
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 context.load_cert_chain("../certc.pem", "../certc.pem")
@@ -238,6 +265,7 @@ try:
                                 print(res)
                                 flag = False
                                 check = True
+                                break
                             elif mes[0] == "ACCEPT":
                                 token = mes[-2]
                                 print("<log in complete>")
@@ -340,23 +368,7 @@ try:
                             username = input("Username: ")
                             password = input("Password: ").replace('\n', '')
                             s.write(bytes(f"PUT {username} {password} \r\n", "utf-8"))
-                            mes = s.read(4096)
-                            #print(mes) adding this just made this part of the code work for some reason
-                            mes = str(mes)[2:-1].split(" ")
-                            if mes[0] == "TRY":
-                                res = " ".join(mes[1:-1])
-                                print()
-                                print(res)
-                                continue
-                            elif mes[0] == "END":
-                                res = " ".join(mes[1:-1])
-                                print()
-                                print(res)
-                                raise KeyboardInterrupt
-                            elif mes[0] == "ACCEPT":
-                                token = mes[-2]
-                                print("<log in complete>")
-                                check = False
+                            put_reader(s)
                         if not check:
                             flag = True
 
