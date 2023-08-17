@@ -25,8 +25,18 @@ down_permit = True
 if os.name == "nt":
     os.system("color")
 
-command_list = ["quit", "online", "new_target", "toggle", "upload", "download", "status"]
+command_list = ["quit", "online", "new_target", "toggle", "upload", "download", "status", "help", "mute", "unmute"]
+mute_list = list()  # only writable from commander()
 def hash(a: str):
+    """
+
+    :param a: String
+    :return: Hash
+
+    A custom code of an md5-like hash. It is important because built-in
+    hash's internal state changes every time you start up the program.
+    It is crucial for it to remain the same always.
+    """
     temp = ""
     for k in a:
         temp += str(bin(ord(k)))
@@ -120,14 +130,22 @@ def hash(a: str):
 
     return int(end)
 
-def receiver(sock):
+def receiver(sock: ssl.SSLSocket):
+    """
+
+    :param sock: The connection socket
+    :return: Returns nothing
+
+    This is the function that listens on the socket.
+    All receiving and downloading is done here.
+    """
     global flag, thread, reset, check, new_thread, down, permit, not_permitted, down_permit
     thread = threading.get_ident()
     while True:
         try:
             m = sock.read(4096)
             m = str(m)[2:-1].split(" ")
-            if m[0] == "RELAY":
+            if m[0] == "RELAY" and m[2] not in mute_list:
                 res = " ".join(m[3:-1])
                 res = res[:-3]
                 print()
@@ -135,7 +153,7 @@ def receiver(sock):
                 date = date.split(" ")
                 date = " ".join(date[1:-1])
                 print(f"> {m[2]}: {res} -- {date}")
-            elif m[0] == "RELAYG":
+            elif m[0] == "RELAYG" and m[1] not in mute_list:
                 res = " ".join(m[2:-1])
                 res = res[:-3]
                 print()
@@ -197,7 +215,7 @@ def receiver(sock):
             elif m[0] == "STOP":
                 res = " ".join(m[1:-1])
                 print()
-                print(f"{res}")
+                print(f"\033[91m {res} \x1b[0m")
                 not_permitted = True
                 down_permit = False
         except ConnectionResetError:
@@ -209,10 +227,22 @@ def receiver(sock):
             pass
         """except OSError:
             print("\033[91m <program ending> \x1b[0m")
-            break"""
+            break
+            
+            Better handling of errors!1!
+            """
 
 
-def put_reader(s):
+def put_reader(s: ssl.SSLSocket):
+    """
+
+    :param s: The connection socket
+    :return: Returns nothing
+
+    This function temporarily manages put state.
+    It is the client version of the put_handler()
+    on the server side.
+    """
     global check, token
 
     mes = s.read(4096)
@@ -235,7 +265,115 @@ def put_reader(s):
     elif mes[0] == "CHECK":
         return put_reader(s)
 
+def commander(s: ssl.SSLSocket, command: str, rest: str):
+    """
 
+    :param s: The connection socket
+    :param command: parsed command
+    :param rest: The remainder of the parsing
+    :return: Returns nothing
+
+    This function is activated when users input is in the
+    command list and is in the correct form. All command
+    management is done here.
+    """
+    global group, flag, reset, check, new_thread, down_permit, mute_list
+    if command == "quit":
+        s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
+        raise KeyboardInterrupt  # I kinda cheat my way into quitting the program
+
+    elif command == "online":
+        s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
+
+    elif command == "new_target":
+        flag = False
+        reset = True
+        check = False
+        new_thread = False
+
+    elif command == "toggle":
+        group = not group
+        s.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
+
+    elif command == "upload":
+        path = input("Enter the file path: ")
+        try:
+            size = os.stat(path).st_size
+            with open(path, "rb") as up:
+                upload = up.read()
+                if os.name == "nt" and "\\" in path:
+                    path = path.replace(" ", "_")
+                    extension = path.split("\\")[-1]
+                elif "/" in path:
+                    path = path.replace(" ", "_")
+                    extension = path.split("/")[-1]
+                else:
+                    path = path.replace(" ", "_")
+                    extension = path
+                s.write(bytes(f"BEGINF {extension} {target} {size} {str(token)} \r\n", "utf-8"))
+                tout = 0  # we set a timeout for this loop
+                while (not permit and tout < 1500) and not not_permitted:
+                    tout += 1
+                    #  listening is always done in the receiver thread.
+                    #  we have a structure that acts like an event listener, permit var is the event flag
+                    time.sleep(0.01)
+                if permit:
+                    s.write(upload)
+                    s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
+                else:
+                    print("Upload not permitted")
+        except:
+            print("A problem has occured, try again.")
+
+    elif command == "download":
+        down_permit = True
+        s.write(bytes(f"CMD <get> {token} \r\n", "utf-8"))
+        while down_permit:
+            time.sleep(0.1)
+            if not down:
+                break
+    elif command == "status":
+        print(f"Target: {target}")
+        print(f"Group: {group}")
+    elif command == "help":
+        print("\033[93m----------\x1b[0m")
+        print("\033[93m--> All commands and their descriptions: <--\x1b[0m")
+        print("\033[93m:quit: --> Quits the program.\x1b[0m")
+        print("\033[93m:online: --> Shows top 100 online users.\x1b[0m")
+        print("\033[93m:new_target: --> Changes your target to your input to this command.\x1b[0m")
+        print("\033[93m:toggle: --> Toggles the group chat.\x1b[0m")
+        print("\033[93m:upload: --> Uploads the file specified with your input.\x1b[0m")
+        print("\033[93m:download: --> Downloads all files sent to you.\x1b[0m")
+        print("\033[93m:mute: --> Shows your current status; target and group chat mode.\x1b[0m")
+        print("\033[93m:unmute: 1 2 3 ... --> Mute a user. Replace numbers with usernames.\x1b[0m")
+        print("\033[93m:status: 1 2 3 ... --> Unmute a user. Replace numbers with usernames.\x1b[0m")
+        print("\033[93m----------\x1b[0m")
+    elif command == "mute":
+        if rest[0] != " ":
+            print("\033[91mWrong sytnax!\x1b[0m")
+            return
+        if rest[-1] != " ":
+            rest += " "
+        to_mute = rest.split(" ")
+        for k in to_mute[1:-1]:
+            mute_list.append(k.replace("\n", ""))
+        print("Users muted!")
+    elif command == "unmute":
+        if rest[0] != " ":
+            print("\033[91mWrong sytnax!\x1b[0m")
+            return
+        if rest[-1] != " ":
+            rest += " "
+        to_unmute = rest.split(" ")
+        for k in to_unmute[1:-1]:
+            try:
+                index = mute_list.index(k.replace("\n", ""))
+                mute_list.pop(index)
+            except:  # Maybe somebody wrote down a non-existing username or sth like it
+                pass
+        print("Users unmuted!")
+
+#config
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 context.load_cert_chain("../certc.pem", "../certc.pem")
 context.check_hostname = False
@@ -283,67 +421,11 @@ try:
                             message = sys.stdin.readline(2048)
                             try:
                                 if str(message)[0] == ":":
-                                    command = str(message).split(":")[1]
+                                    splitted = str(message).split(":")
+                                    command = splitted[1]
+                                    rest = splitted[2]
                                     if command in command_list:
-
-                                        if command == "quit":
-                                            s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
-                                            raise KeyboardInterrupt  # I kinda cheat my way into quitting the program
-
-                                        elif command == "online":
-                                            s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
-
-                                        elif command == "new_target":
-                                            flag = False
-                                            reset = True
-                                            check = False
-                                            new_thread = False
-
-                                        elif command == "toggle":
-                                            group = not group
-                                            s.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
-
-                                        elif command == "upload":
-                                            path = input("Enter the file path: ")
-                                            try:
-                                                size = os.stat(path).st_size
-                                                with open(path, "rb") as up:
-                                                    upload = up.read()
-                                                    if os.name == "nt" and "\\" in path:
-                                                        path = path.replace(" ", "_")
-                                                        extension = path.split("\\")[-1]
-                                                    elif "/" in path:
-                                                        path = path.replace(" ", "_")
-                                                        extension = path.split("/")[-1]
-                                                    else:
-                                                        path = path.replace(" ", "_")
-                                                        extension = path
-                                                    s.write(bytes(f"BEGINF {extension} {target} {size} {str(token)} \r\n", "utf-8"))
-                                                    tout = 0  # we set a timeout for this loop
-                                                    while (not permit and tout < 1500) and not not_permitted:
-                                                        tout += 1
-                                                        #  listening is always done in the receiver thread.
-                                                        #  we have a structure that acts like an event listener, permit var is the event flag
-                                                        time.sleep(0.01)
-                                                    if permit:
-                                                        s.write(upload)
-                                                        s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
-                                                    else:
-                                                        print("Upload not permitted")
-                                            except:
-                                                print("A problem has occured, try again.")
-
-                                        elif command == "download":
-                                            down_permit = True
-                                            s.write(bytes(f"CMD <get> {token} \r\n", "utf-8"))
-                                            while down_permit:
-                                                time.sleep(0.1)
-                                                if not down:
-                                                    break
-                                        elif command == "status":
-                                            print(f"Target: {target}")
-                                            print(f"Group: {group}")
-
+                                        commander(s, command, rest)
                                     else:
                                         if flag and not group:
                                             s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))
@@ -383,69 +465,11 @@ try:
                             message = sys.stdin.readline(2048)
                             try:
                                 if str(message)[0] == ":":
-                                    command = str(message).split(":")[1]
+                                    splitted = str(message).split(":")
+                                    command = splitted[1]
+                                    rest = splitted[2]
                                     if command in command_list:
-
-                                        if command == "quit":
-                                            s.write(bytes(f"END <user command> {str(token)} \r\n", "utf-8"))
-                                            raise KeyboardInterrupt
-
-                                        elif command == "online":
-                                            s.write(bytes(f"CMD <online> {str(token)} \r\n", "utf-8"))
-
-                                        elif command == "new_target":
-                                            flag = False
-                                            reset = True
-                                            check = False
-                                            new_thread = False
-
-                                        elif command == "toggle":
-                                            group = not group
-                                            s.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
-
-                                        elif command == "upload":
-                                            path = input("Enter the file path: ")
-                                            try:
-                                                size = os.stat(path).st_size
-                                                with open(path, "rb") as up:
-                                                    upload = up.read()
-                                                    if os.name == "nt" and "\\" in path:
-                                                        path = path.replace(" ", "_")
-                                                        extension = path.split("\\")[-1]
-                                                    elif "/" in path:
-                                                        path = path.replace(" ", "_")
-                                                        extension = path.split("/")[-1]
-                                                    else:
-                                                        path = path.replace(" ", "_")
-                                                        extension = path
-                                                    s.write(
-                                                        bytes(f"BEGINF {extension} {target} {size} {str(token)} \r\n",
-                                                              "utf-8"))
-                                                    tout = 0  # we set a timeout for this loop
-                                                    while (not permit and tout < 1500) and not not_permitted:
-                                                        tout += 1
-                                                        #  listening is always done in the receiver thread.
-                                                        #  we have a structure that acts like an event listener, permit var is the event flag
-                                                        time.sleep(0.01)
-                                                    if permit:
-                                                        s.write(upload)
-                                                        s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
-                                                    else:
-                                                        print("Upload not permitted, file too big")
-                                            except:
-                                                print("A problem has occured, try again.")
-
-                                        elif command == "download":
-                                            down_permit = True
-                                            s.write(bytes(f"CMD <get> {token} \r\n", "utf-8"))
-                                            while down_permit:
-                                                time.sleep(0.1)
-                                                if not down:
-                                                    break
-                                        elif command == "status":
-                                            print(f"Target: {target}")
-                                            print(f"Group: {group}")
-
+                                        commander(s, command, rest)
                                     else:
                                         if flag and not group:
                                             s.write(bytes(f"MSG {target} {username} {str(message)} {str(token)} \r\n", "utf-8"))

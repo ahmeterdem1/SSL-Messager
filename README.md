@@ -35,6 +35,11 @@ closes server-sided sockets and as a resulting exception, related threads return
 In the client side 2 threads exist. One is for receiving and printing out messages,
 the other is for getting input from the user and sending messages.
 
+banned.csv is an ip list which has all banned ip's. To unban, edit the file.
+
+dev_client.py is to send queries by hand, and therefore to debug. It is a good
+tool to see if any malformed queries or injecitons generate.
+
 ## Protocol
 
 Without any user online, server just sits silently. When a user is trying to log in,
@@ -214,6 +219,19 @@ Upload a file, one at a time.
 
 Download all files sent to you. Clears the history, so if commanded again,
 no duplicate files are downloaded.
+
+### :help:
+
+Prints other commands descriptions.
+
+### :mute: user1 user2 user3 ...
+
+Mutes the specified users. There may be as many as you wish. Only does
+internal actions.
+
+### :unmute: user1 user2 user3 ...
+
+Unmutes the specified users. Same as above otherwise.
 
 ### :status:
 

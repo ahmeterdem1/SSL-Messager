@@ -432,7 +432,10 @@ def handler(con, ip, port, user, t):
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
     except OSError as e:
-        object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
+        try:
+            object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
+        except:
+            pass
         date = time.asctime()
         # These files will not be reachable with ftp because they have spaces in them
         # But i added the UserError.txt to the important files list just in case.
@@ -485,7 +488,6 @@ def admin():
     while True:
         print("Enter your command: ", end="")
         cmd = sys.stdin.readline(4096)
-        #print(cmd)
         cmd = str(cmd).replace("\n", "")
         if cmd[0] == "/":
             cmd = cmd[1:]
@@ -508,7 +510,6 @@ def admin():
             elif cmd[0] == "msg":
                 user = cmd[1]
                 mes = " ".join(cmd[2:])
-                print(mes)
                 object_list[user].write(bytes(f"RELAY {user} admin {mes}... \r\n", "utf-8"))
             elif cmd[0] == "g":
                 mes = " ".join(cmd[1:])
@@ -615,7 +616,6 @@ try:
             threading.Thread(target=admin).start()
             while True:
                 conn, addr = secure_server.accept()
-                print(bans)
                 if str(addr[0]) in bans:
                     conn.close()
                 else:
