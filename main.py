@@ -492,6 +492,13 @@ def check():
             pass
 
 def admin():
+    """
+
+    :return: Returns nothing
+
+    Manages the admin power.
+    """
+    global bans
     while True:
         print("Enter your command: ", end="")
         cmd = sys.stdin.readline(4096)
@@ -510,6 +517,7 @@ def admin():
             elif cmd[0] == "ban":
                 user = cmd[1]
                 ip = ip_list[user]
+                bans.append(str(ip))
                 with open("banned.csv", "a") as file:
                     file.write(str(ip) + "\n")
                 object_list[user].write(bytes("END <you are banned> \r\n", "utf-8"))
