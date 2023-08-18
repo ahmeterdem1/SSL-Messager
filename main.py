@@ -358,7 +358,7 @@ def handler(con, ip, port, user, t):
                 try:
                     with open(f"{filename}", "xb") as new_file:
                         measured_size = 0
-                        allowance[mes[2]] += 1  # Allowance increased
+                        #allowance[mes[2]] += 1  # Allowance increased
                         while True:
                             new_data = con.read(4096)
                             measured_size += 4096
@@ -379,14 +379,13 @@ def handler(con, ip, port, user, t):
 
                             new_file.write(new_data)
                     con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
-                    time.sleep(2)
-                    allowance[mes[2]] -= 1
-                    decreased = True
+                    """allowance[mes[2]] -= 1
+                    decreased = True"""
                     continue
                 except Exception as e:
-                    if not decreased:
+                    """if not decreased:
                         allowance[mes[2]] -= 1
-                        decreased = True
+                        decreased = True"""
                     print(e)
                     con.write(bytes("CMD <problem with command> \r\n", "utf-8"))
 

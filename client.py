@@ -344,9 +344,9 @@ def commander(s: ssl.SSLSocket, command: str, rest: str):
         print("\033[93m:toggle: --> Toggles the group chat.\x1b[0m")
         print("\033[93m:upload: --> Uploads the file specified with your input.\x1b[0m")
         print("\033[93m:download: --> Downloads all files sent to you.\x1b[0m")
-        print("\033[93m:mute: --> Shows your current status; target and group chat mode.\x1b[0m")
+        print("\033[93m:mute: 1 2 3 ... --> Mute a user. Replace numbers with usernames.\x1b[0m")
         print("\033[93m:unmute: 1 2 3 ... --> Mute a user. Replace numbers with usernames.\x1b[0m")
-        print("\033[93m:status: 1 2 3 ... --> Unmute a user. Replace numbers with usernames.\x1b[0m")
+        print("\033[93m:status: --> Shows your current status; target and group chat mode.\x1b[0m")
         print("\033[93m----------\x1b[0m")
     elif command == "mute":
         if rest[0] != " ":
