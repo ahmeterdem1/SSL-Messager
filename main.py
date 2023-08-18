@@ -20,6 +20,7 @@ restricted = ["main.py", "client.py", "user.csv", "UserError.txt", "banned.csv"]
 allowance = dict()  #  upload download collisions are prevented with this
 ip_list = dict()  #  this is for managing bans only
 admin_command_list = ["online", "kick", "ban", "msg", "g", "s"]
+message_queue = list()
 
 def kick(user: str):
     """
@@ -212,8 +213,6 @@ def intro_handler(connection, address):
     #normal log in
     elif mes[1] in f.keys():
         if not f[mes[1]] == str(hash(mes[2])):
-            print(f[mes[1]])
-            print(hash(mes[2]))
             connection.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
             connection.close()
         elif mes[1] in object_list.keys():
@@ -239,7 +238,6 @@ def intro_handler(connection, address):
         connection.write(bytes("END <incorrect username or password> \r\n", "utf-8"))
         connection.close()
 
-
 def handler(con, ip, port, user, t):
     """
     :param con: Client connection object as SSLSocket
@@ -253,7 +251,7 @@ def handler(con, ip, port, user, t):
     Does both receiving sending messages. This function is
     called within another thread after user logs in or signs up.
     """
-    global conn_list, data_list, object_list, group_list, token_list, allowance, ip_list
+    global conn_list, data_list, object_list, group_list, token_list, allowance, ip_list, message_queue
     data_list.append(threading.get_ident())
     group_list[user] = False
     ip_list[user] = ip
@@ -276,6 +274,10 @@ def handler(con, ip, port, user, t):
                 elif received != str(token_list[mes[2]]):
                     # always check the received username for the token
                     break
+                elif allowance[mes[1]] != 0:
+                    res = " ".join(mes[3:-2])
+                    message_queue.append(["RELAY", mes[1], mes[2], res])
+                # All the above are controls, this below is the final state, which is to send the message
                 else:
                     res = " ".join(mes[3:-2])
                     object_list[mes[1]].write(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
@@ -288,9 +290,13 @@ def handler(con, ip, port, user, t):
                 elif received != str(token_list[user]):
                     break
                 res = " ".join(mes[2:-2])
+
                 for k in f.keys():
                     #  group list is not emptied when someone leaves the server, keep that in mind
                     if k != mes[1] and (k in object_list.keys()) and group_list[k]:
+                        if allowance[k] != 0:
+                            message_queue.append(["RELAYG", mes[1], res, k])  # The last one is the "target"
+                            continue
                         object_list[k].write(bytes(f"RELAYG {mes[1]} {res} \r\n", "utf-8"))
 
             elif mes[0] == "CMD":
@@ -338,7 +344,7 @@ def handler(con, ip, port, user, t):
                 if received != str(token_list[user]):
                     break
                 declared_size = int(mes[3])
-                if declared_size > 5000000:  #  max file size is 10mb
+                if declared_size > 15000000:  #  max file size is 10mb
                     con.write(bytes("STOP <size too big> \r\n", "utf-8"))
                     continue
                 filename = mes[2] + "+" + str(secrets.randbits(64)) + mes[1]
@@ -373,6 +379,7 @@ def handler(con, ip, port, user, t):
 
                             new_file.write(new_data)
                     con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
+                    time.sleep(2)
                     allowance[mes[2]] -= 1
                     decreased = True
                     continue
@@ -518,6 +525,38 @@ def admin():
             elif cmd[0] == "s":
                 print(server_status())
 
+def queue():
+    """
+
+    :return: Returns nothing
+
+    This function is called ona seperate thread
+    at the servers start up. It manages the message
+    queue for the transmission control.
+    """
+    global message_queue
+    while True:
+        the_copy = message_queue.copy()
+        # I know all the elements are lists too, therefore their id's remain the same
+        # But we don't do any change on them, just read from them.
+        for k in the_copy:
+            if k[0] == "RELAY" and allowance[k[1]] == 0:
+                try:
+                    object_list[k[1]].write(bytes(f"RELAY {k[1]} {k[2]} {k[3]} \r\n", "utf-8"))
+                    index = message_queue.index(k)
+                    message_queue.pop(index)
+                except:
+                    pass
+            elif k[0] == "RELAYG" and allowance[k[-1]] == 0:
+                try:
+                    object_list[k[-1]].write(bytes(f"RELAYG {k[1]} {k[2]} \r\n", "utf-8"))
+                    index = message_queue.index(k)
+                    message_queue.pop(index)
+                except:
+                    pass
+
+        time.sleep(0.01)
+
 
 #  I did not put any logging here because if anything happens, we can just kick the person out.
 #  Literally who cares.
@@ -608,12 +647,16 @@ try:
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:
+            # Server initialization happens here, after the ssl socket
+            # becomes active.
+
             # threading.Thread(target=check).start()
             """
-            Check function will be disabled for now. It causes many problems in
-            client-server talk
+            Check function will be disabled for now. It causes many problems 
+            and interruptions in client-server talk.
             """
             threading.Thread(target=admin).start()
+            threading.Thread(target=queue).start()
             while True:
                 conn, addr = secure_server.accept()
                 if str(addr[0]) in bans:

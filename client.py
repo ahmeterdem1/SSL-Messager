@@ -356,7 +356,11 @@ def commander(s: ssl.SSLSocket, command: str, rest: str):
             rest += " "
         to_mute = rest.split(" ")
         for k in to_mute[1:-1]:
-            mute_list.append(k.replace("\n", ""))
+            u = k.replace("\n", "")
+            if u == "admin":
+                # Yeah i know this is very easy to "hack", i don't care
+                continue
+            mute_list.append(u)
         print("Users muted!")
     elif command == "unmute":
         if rest[0] != " ":
@@ -372,6 +376,31 @@ def commander(s: ssl.SSLSocket, command: str, rest: str):
             except:  # Maybe somebody wrote down a non-existing username or sth like it
                 pass
         print("Users unmuted!")
+
+def reader(s: ssl.SSLSocket):
+    """
+
+    :param s: The connection socket
+    :return: Returns nothing
+
+    This function handles logging in.
+    """
+    global flag, check, token
+    mes = s.read(4096)
+    mes = str(mes)[2:-1].split(" ")
+    if mes[0] == "END" and mes[1] == "*":
+        res = " ".join(mes[2:-1])
+        print(res)
+        raise KeyboardInterrupt
+    elif mes[0] == "END" and mes[1] != "*":
+        res = " ".join(mes[1:-1])
+        print(res)
+        flag = False
+        check = True
+        raise KeyboardInterrupt
+    elif mes[0] == "ACCEPT":
+        token = mes[-2]
+        print("<log in complete>")
 
 #config
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -392,21 +421,7 @@ try:
                             username = input("Username: ")
                             password = input("Password: ").replace('\n', '')
                             s.write(bytes(f"AUTH {username} {password} \r\n", "utf-8"))
-                            mes = s.read(4096)
-                            mes = str(mes)[2:-1].split(" ")
-                            if mes[0] == "END" and mes[1] == "*":
-                                res = " ".join(mes[2:-1])
-                                print(res)
-                                break
-                            elif mes[0] == "END" and mes[1] != "*":
-                                res = " ".join(mes[1:-1])
-                                print(res)
-                                flag = False
-                                check = True
-                                break
-                            elif mes[0] == "ACCEPT":
-                                token = mes[-2]
-                                print("<log in complete>")
+                            reader(s)
                         if not check:
                             flag = True
 

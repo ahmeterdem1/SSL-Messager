@@ -3,6 +3,7 @@
 A basic cyphered tool for messaging.
 
 Our service is online now! You may join us by setting up your client system.
+(Still in debug process though.)
 
 ## Setup
 
@@ -224,7 +225,7 @@ no duplicate files are downloaded.
 
 Prints other commands descriptions.
 
-### :mute: user1 user2 user3 ...
+### :&#8203;mute: user1 user2 user3 ...
 
 Mutes the specified users. There may be as many as you wish. Only does
 internal actions.
@@ -268,6 +269,27 @@ Sends the message to the group chat.
 ### /s
 
 Prints the current server status. This is for debug purposes.
+
+
+## Queue system
+
+This is done in accordance with FTP's regulation. The problem arises from the fact
+that both FTP and the messaging protocol uses the same port. Therefore we need to
+regulate the usage of this singular port in order to prevent errors. In our system,
+normal messages are assumed to be instant. The time that it takes for the socket to
+completely receive a message protocol from the beginning of the query to the end of
+it is very low. Therefore, this time span is considered to be zero.
+
+However, this is not the case for the FTP. Because of the low upload speeds of almost
+all ISP's; this action takes seconds, sometimes tens of seconds depending on the file
+size. For this reason, both uploads and downloads are considered to be blocking code
+for the socket. If one of the users socket is blocked by this way, it is indicated
+with a number in "allowance" dict. When someone tries to send a message to this user,
+their message is added to a list, which is the message queue. A thread in the server
+side loops over this list constantly. If ever someones allowance gets to normal in
+this list, the message gets sent.
+
+With this method, a layer of transmission control is added to messaging protocol.
 
 ## Error Logging
 
@@ -350,14 +372,14 @@ This was indeed intentional. My first goal was to use my own computer as the ser
 to the public. As many of us can guess, this is not a good idea. So i wanted extra security
 in my code with minimal effort. So i made the server super sensitive. It used to shutdown
 when someone tried to log in with an invalid username. It used to shutdown after receiving
-incorrect protocol syntax. And still aggresive behaviour like this can be found in the code.
+incorrect protocol syntax. And still aggressive behaviour like this can be found in the code.
 But the server is getting more and more "normal" over time. And i have changed my mind, now
 i use amazons servers instead of my own computer. So more flexible behaviour will continue
 to be implemented. I guess my end goal here would be to connect ciphertools and this project
 and to create a fully functional and fully custom tls server. So one day i will turn to using
 my own computer despite all the possible dangers.
 
-In the recent debugging tests, a server shutdown has never been observed. However there was just
+In the recent debugging tests, a server shutdown has never been observed. However, there was just
 one instance that server kicked everybody but stayed online. The causing error has been identified.
 
 #### Input-Output Mix up
@@ -387,7 +409,7 @@ added to the name.
 
 #### Database itself (solved)
 
-Database sometimes breakes down for some reason. Empty lines may generate in the csv file.
+Database sometimes breaks down for some reason. Empty lines may generate in the csv file.
 Users get saved in the database without problems but an error in the client side may
 result in a malformed query and this query results in a broken database in the server-side.
 Whole file system of this structure will get an update.
@@ -440,8 +462,8 @@ after a gui version is created.
 #### 5-second limit (solved, limit disabled)
 
 This certainly breaks down the users. When trying to upload files larger than the obscure limit
-defined by the 5-second limit, "A problem has occured" message is obtained right before client
-side only disconnection. No disconnect occurs in the server for some reason. User appers as 
+defined by the 5-second limit, "A problem has occurred" message is obtained right before client
+side only disconnection. No disconnect occurs in the server for some reason. User appears as 
 online even though kicked in reality. No error message or log is generated in the server. Indeed
 logically, there shouldn't be any errors in the server. Server just abruptly saves the file after
 5 seconds then continues to listen normally. I have no idea why this happens. I think we need to
@@ -465,7 +487,7 @@ The reason is the same as above in the "Users" section. It is solved now.
 
 #### Command timing (solved)
 
-This only occures for upload-download commands, and results in an OSError. When somebody uploads
+This only occurres for upload-download commands, and results in an OSError. When somebody uploads
 a file to someone else, and this person starts downloading at the same time, the created and still
 being filled file gets deleted. This raises an OSError. Everybody gets kicked but the server 
 continues to function. Probable solution to this is to queue these two commands for target pairs.
@@ -481,5 +503,5 @@ Disabling these extensions is the short answer. I have no idea about the proper 
 Probably will disable some other extensions for security reasons, e.g. .bat, .sh, .s, .o, ...
 
 Also for some reason "Bad file descriptor" error is obtained somewhat frequently in large file
-uploads-downloads. The reason is yet unknown. But the servers aggresive response to exceptions
+uploads-downloads. The reason is yet unknown. But the servers aggressive response to exceptions
 has been modeerated to prevent further errors resulting from other errors.
