@@ -39,7 +39,7 @@ the other is for getting input from the user and sending messages.
 banned.csv is an ip list which has all banned ip's. To unban, edit the file.
 
 dev_client.py is to send queries by hand, and therefore to debug. It is a good
-tool to see if any malformed queries or injecitons generate.
+tool to see if any malformed queries or injections generate.
 
 ## Protocol
 
@@ -169,7 +169,7 @@ server applies the same method as client, except:
 
 `ENDF ENDF ENDF \r\n`
 
-This tripple "ENDF" is to prevent bugs arising from within the file data. It is not so
+This triple "ENDF" is to prevent bugs arising from within the file data. It is not so
 probable that the sent data chuck not intended to be the last has the same format as this.
 "\r\n" part is not checked, but is assumed to be there while indexing.
 
@@ -495,13 +495,18 @@ But still, it is very improbable that this will occur. Increased amount of peopl
 does not increase the probability of this happening. This only happens when the receiver and the
 sender initiates the given commands at the same time. There are always 1 receiver and 1 sender.
 
-#### Uploads
+#### Uploads (solved)
 
-Some file types don't get sent properly. These include .mp4 and .exe files. There may be more.
-Disabling these extensions is the short answer. I have no idea about the proper answer yet.
+~~Some file types don't get sent properly. These include .mp4 and .exe files. There may be more.
+Disabling these extensions is the short answer. I have no idea about the proper answer yet.~~
 
-Probably will disable some other extensions for security reasons, e.g. .bat, .sh, .s, .o, ...
+~~Probably will disable some other extensions for security reasons, e.g. .bat, .sh, .s, .o, ...~~
 
-Also for some reason "Bad file descriptor" error is obtained somewhat frequently in large file
+~~Also for some reason "Bad file descriptor" error is obtained somewhat frequently in large file
 uploads-downloads. The reason is yet unknown. But the servers aggressive response to exceptions
-has been modeerated to prevent further errors resulting from other errors.
+has been modeerated to prevent further errors resulting from other errors.~~
+
+So this was about "transmission control". When someone tries to download, and some other sends a
+message to this person, a mix up occurres due to more than one thread trying to write to the same
+socket. Testing with some older version of the server, "Bad file descriptor" error generated with
+this exact same principle. Now a queue system has been implemented. No more errors.

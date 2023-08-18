@@ -338,9 +338,9 @@ def handler(con, ip, port, user, t):
                 break
 
             elif mes[0] == "BEGINF":
-                if allowance[mes[2]] != 0:
+                """if allowance[mes[2]] != 0:
                     con.write(bytes("STOP <collision detected - wait for a moment before trying again> \r\n", "utf-8"))
-                    continue
+                    continue"""
                 if received != str(token_list[user]):
                     break
                 declared_size = int(mes[3])
