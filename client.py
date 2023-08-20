@@ -349,33 +349,41 @@ def commander(s: ssl.SSLSocket, command: str, rest: str):
         print("\033[93m:status: --> Shows your current status; target and group chat mode.\x1b[0m")
         print("\033[93m----------\x1b[0m")
     elif command == "mute":
-        if rest[0] != " ":
-            print("\033[91mWrong sytnax!\x1b[0m")
-            return
-        if rest[-1] != " ":
-            rest += " "
-        to_mute = rest.split(" ")
-        for k in to_mute[1:-1]:
-            u = k.replace("\n", "")
-            if u == "admin":
-                # Yeah i know this is very easy to "hack", i don't care
-                continue
-            mute_list.append(u)
-        print("Users muted!")
+        try:
+            if rest[0] != " ":
+                print("\033[91mWrong sytnax!\x1b[0m")
+                return
+            if rest[-1] != " ":
+                rest += " "
+            to_mute = rest.split(" ")
+            for k in to_mute[1:-1]:
+                u = k.replace("\n", "")
+                if u == "admin":
+                    # Yeah i know this is very easy to "hack", i don't care
+                    continue
+                mute_list.append(u)
+            print("Users muted!")
+        except:
+            print("A problem has occurred during the execution of the command.")
     elif command == "unmute":
-        if rest[0] != " ":
-            print("\033[91mWrong sytnax!\x1b[0m")
-            return
-        if rest[-1] != " ":
-            rest += " "
-        to_unmute = rest.split(" ")
-        for k in to_unmute[1:-1]:
-            try:
-                index = mute_list.index(k.replace("\n", ""))
-                mute_list.pop(index)
-            except:  # Maybe somebody wrote down a non-existing username or sth like it
-                pass
-        print("Users unmuted!")
+        try:
+            if rest[0] != " ":
+                print("\033[91mWrong sytnax!\x1b[0m")
+                return
+            if rest[-1] != " ":
+                rest += " "
+            to_unmute = rest.split(" ")
+            for k in to_unmute[1:-1]:
+                try:
+                    index = mute_list.index(k.replace("\n", ""))
+                    mute_list.pop(index)
+                except:  # Maybe somebody wrote down a non-existing username or sth like it
+                    pass
+            print("Users unmuted!")
+        except:
+            print("A problem has occurred during the execution of the command.")
+    else:
+        print("Command not typed correctly")
 
 def reader(s: ssl.SSLSocket):
     """
@@ -438,7 +446,7 @@ try:
                                 if str(message)[0] == ":":
                                     splitted = str(message).split(":")
                                     command = splitted[1]
-                                    rest = splitted[2]
+                                    rest = splitted[-1]
                                     if command in command_list:
                                         commander(s, command, rest)
                                     else:
@@ -482,7 +490,7 @@ try:
                                 if str(message)[0] == ":":
                                     splitted = str(message).split(":")
                                     command = splitted[1]
-                                    rest = splitted[2]
+                                    rest = splitted[-1]
                                     if command in command_list:
                                         commander(s, command, rest)
                                     else:

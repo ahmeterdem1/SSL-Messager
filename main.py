@@ -502,9 +502,14 @@ def admin():
         print("Enter your command: ", end="")
         cmd = sys.stdin.readline(4096)
         cmd = str(cmd).replace("\n", "")
+        if len(cmd) == 0:
+            continue
         if cmd[0] == "/":
-            cmd = cmd[1:]
-            cmd = cmd.split(" ")
+            try:
+                cmd = cmd[1:]
+                cmd = cmd.split(" ")
+            except:
+                continue
             if cmd[0] == "online":
                 print("<", end="")
                 print(" ".join(list(object_list.keys())), end="")
