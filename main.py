@@ -338,13 +338,10 @@ def handler(con, ip, port, user, t):
                 break
 
             elif mes[0] == "BEGINF":
-                """if allowance[mes[2]] != 0:
-                    con.write(bytes("STOP <collision detected - wait for a moment before trying again> \r\n", "utf-8"))
-                    continue"""
                 if received != str(token_list[user]):
                     break
                 declared_size = int(mes[3])
-                if declared_size > 15000000:  #  max file size is 10mb
+                if declared_size > 100000000:  #  max file size is 10mb
                     con.write(bytes("STOP <size too big> \r\n", "utf-8"))
                     continue
                 filename = mes[2] + "+" + str(secrets.randbits(64)) + mes[1]
@@ -354,11 +351,9 @@ def handler(con, ip, port, user, t):
 
                 con.write(bytes("PROCEED \r\n", "utf-8"))
                 #important bug solved here
-                decreased = False
                 try:
                     with open(f"{filename}", "xb") as new_file:
                         measured_size = 0
-                        #allowance[mes[2]] += 1  # Allowance increased
                         while True:
                             new_data = con.read(4096)
                             measured_size += 4096
@@ -379,13 +374,8 @@ def handler(con, ip, port, user, t):
 
                             new_file.write(new_data)
                     con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
-                    """allowance[mes[2]] -= 1
-                    decreased = True"""
                     continue
                 except Exception as e:
-                    """if not decreased:
-                        allowance[mes[2]] -= 1
-                        decreased = True"""
                     print(e)
                     con.write(bytes("CMD <problem with command> \r\n", "utf-8"))
 
