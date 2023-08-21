@@ -192,7 +192,7 @@ def intro_handler(connection, address):
         if len(mes[1]) > 15:
             c = False
         if c:
-            with open("user.csv", "a") as file:
+            with open("../user.csv", "a") as file:
                 file.write(f"{str(mes[1])},{str(hash(mes[2]))}\n")
             f[mes[1]] = str(hash(mes[2]))  # appends the data to the ram
             token = secrets.randbits(16)
@@ -401,7 +401,10 @@ def handler(con, ip, port, user, t):
             pass
 
     except IndexError as e:
-        object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
+        try:
+            object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
+        except:
+            pass
         kick(user)
         date = time.asctime()
         with open("UserError.txt", "a") as er:
@@ -410,7 +413,10 @@ def handler(con, ip, port, user, t):
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
     except ConnectionResetError as e:
-        object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
+        try:
+            object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
+        except:
+            pass
         kick(user)
         date = time.asctime()
         with open("UserError.txt", "a") as er:
@@ -419,7 +425,10 @@ def handler(con, ip, port, user, t):
             er.write(f"User info: {user} | {ip}:{port} | {t}\n")
             er.write("No query received\n")
     except ValueError as e:
-        object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
+        try:
+            object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
+        except:
+            pass
         kick(user)
         date = time.asctime()
         with open("UserError.txt", "a") as er:
@@ -600,7 +609,7 @@ def put_handler(con, ip, port, control):
                     else:
                         control = True
             if mess[0] == "PUT" and not (mess[1] in f.keys()) and control:
-                with open("user.csv", "a") as x:
+                with open("../user.csv", "a") as x:
                     x.write(f"{str(mess[1])},{str(hash(mess[2]))}\n")
                 f[mess[1]] = str(hash(mess[2]))  # appends the data to the ram
                 token = secrets.randbits(16)
@@ -626,7 +635,7 @@ def put_handler(con, ip, port, control):
 
 
 try:
-    with open("user.csv", "r") as file:
+    with open("../user.csv", "r") as file:
         lines = file.readlines()
         #  Some compilers for some reason put an empty string at the end of this
         lines = list(filter(lambda x: x != "", lines))
@@ -645,7 +654,7 @@ try:
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         #172.31.19.23
-        server.bind(("172.31.19.23", 18443))
+        server.bind(("192.168.1.15", 4000))
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:
