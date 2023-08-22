@@ -36,7 +36,7 @@ def kick(user: str):
     try:
         object_list[user].close()
     except:
-        print(f"<connection did not close for {user} - proceeding to empty from database>")
+        print(f"\033[93m<connection did not close for {user} - proceeding to empty from database>\x1b[0m")
     object_list.pop(user)
     conn_list.pop(user)
     token_list.pop(user)
@@ -351,7 +351,9 @@ def handler(con, ip, port, user, t):
 
                 con.write(bytes("PROCEED \r\n", "utf-8"))
                 #important bug solved here
+                decreased = False
                 try:
+                    allowance[mes[2]] += 1
                     with open(f"{filename}", "xb") as new_file:
                         measured_size = 0
                         while True:
@@ -362,6 +364,7 @@ def handler(con, ip, port, user, t):
                                 con.write(bytes("END <incorrect size declaration> \r\n", "utf-8"))
                                 kick(user)
                                 allowance[mes[2]] -= 1
+                                decreased = True
                                 os.remove(f"{filename}")
                                 return
                             str_data = str(new_data)[2:-1].split(" ")
@@ -374,9 +377,13 @@ def handler(con, ip, port, user, t):
 
                             new_file.write(new_data)
                     con.write(bytes("CMD <upload complete> \r\n", "utf-8"))
+                    allowance[mes[2]] -= 1
+                    decreased = True
                     continue
                 except Exception as e:
-                    print(e)
+                    if not decreased:
+                        allowance[mes[2]] -= 1
+                    print(f"\033[93m{e}\x1b[0m")
                     con.write(bytes("CMD <problem with command> \r\n", "utf-8"))
 
             else:
