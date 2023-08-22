@@ -510,3 +510,12 @@ So this was about "transmission control". When someone tries to download, and so
 message to this person, a mix up occurres due to more than one thread trying to write to the same
 socket. Testing with some older version of the server, "Bad file descriptor" error generated with
 this exact same principle. Now a queue system has been implemented. No more errors.
+
+#### Upload timeout (caused by the socket library itself)
+
+Write operations on sockets have timeouts. The hardcoded file size limit on the server is 100mb but
+this does not mean that you can upload that much of data. It depends on your upload speeds. Upload
+should take less time than the timeout of the write operation. This will be properly solved in
+the near future with spreading the write operation on multiple linear instances (no threading, yet).
+
+I set the timeouts to "None" before FTP operations, i did not check if it works. Maybe it does.

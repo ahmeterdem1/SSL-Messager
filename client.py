@@ -318,6 +318,7 @@ def commander(s: ssl.SSLSocket, command: str, rest: str):
                     #  we have a structure that acts like an event listener, permit var is the event flag
                     time.sleep(0.01)
                 if permit:
+                    s.settimeout(None)
                     s.write(upload)
                     s.write(bytes(f"ENDF {token} \r\n", "utf-8"))
                 else:

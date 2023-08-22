@@ -323,6 +323,7 @@ def handler(con, ip, port, user, t):
                         with open(k, "rb") as to_send:
                             con.write(bytes(f"BEGINF {name} \r\n", "utf-8"))
                             data = to_send.read()
+                            con.settimeout(None)
                             con.write(data)
                             con.write(bytes("ENDF ENDF ENDF \r\n", "utf-8"))
                     con.write(bytes("CMD <file send complete> \r\n", "utf-8"))
