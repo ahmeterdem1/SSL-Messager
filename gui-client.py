@@ -751,7 +751,7 @@ def receiver(auth, main, sock: ssl.SSLSocket):
             elif mes[0] == "RELAYG":
                 main.group_who = mes[1]
                 main.group_what = " ".join(mes[2:-1])
-                main.group_received_trigger.clicked()
+                main.group_received_trigger.click()
             elif mes[0] == "CNT":
                 res = " ".join(mes[1:-1])
                 main.error_info = "Server message"
