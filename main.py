@@ -523,7 +523,10 @@ def admin():
                 print(">")
             elif cmd[0] == "kick":
                 user = cmd[1]
-                object_list[user].write(bytes("END <you are being kicked> \r\n", "utf-8"))
+                try:
+                    object_list[user].write(bytes("END <you are being kicked> \r\n", "utf-8"))
+                except:
+                    pass
                 kick(user)
             elif cmd[0] == "ban":
                 user = cmd[1]
@@ -531,16 +534,25 @@ def admin():
                 bans.append(str(ip))
                 with open("banned.csv", "a") as file:
                     file.write(str(ip) + "\n")
-                object_list[user].write(bytes("END <you are banned> \r\n", "utf-8"))
+                try:
+                    object_list[user].write(bytes("END <you are banned> \r\n", "utf-8"))
+                except:
+                    pass
                 kick(user)
             elif cmd[0] == "msg":
                 user = cmd[1]
                 mes = " ".join(cmd[2:])
-                object_list[user].write(bytes(f"RELAY {user} admin {mes}... \r\n", "utf-8"))
+                try:
+                    object_list[user].write(bytes(f"RELAY {user} admin {mes}... \r\n", "utf-8"))
+                except:
+                    print(f"User: {user} unreachable")
             elif cmd[0] == "g":
                 mes = " ".join(cmd[1:])
                 for k, v in object_list.items():
-                    v.write(bytes(f"RELAYG {k} admin {mes}... \r\n", "utf-8"))
+                    try:
+                        v.write(bytes(f"RELAYG {k} admin {mes}... \r\n", "utf-8"))
+                    except:
+                        pass
             elif cmd[0] == "s":
                 print(server_status())
 
