@@ -41,6 +41,29 @@ banned.csv is an ip list which has all banned ip's. To unban, edit the file.
 dev_client.py is to send queries by hand, and therefore to debug. It is a good
 tool to see if any malformed queries or injections generate.
 
+## GUI
+
+A gui version for the client is available now! Everything works just the same 
+with the terminal client. There are, however, 2 differences.
+
+### There is no toggling in the gui.
+
+Group and private chatting can be done at the same time. This uses a left out "bug"
+on the server side. When you toggle to the group chat, technically, you can still
+send and receive private message queries. Gui toggles the group chat with the
+proper "CMD" query at log in and never turns it off.
+
+### There is no status command.
+
+Status command had 2 purposes. To see if you are in the group chat, to see who was
+your target. There is no toggling anymore, and your target is always displayed on
+the top right corner of your screen.
+
+### Important notice
+
+Due to gui appearing always on group chat and some data parsing differences, terminal
+and gui client are not compatible with each other.
+
 ## Protocol
 
 Without any user online, server just sits silently. When a user is trying to log in,
@@ -382,7 +405,7 @@ my own computer despite all the possible dangers.
 In the recent debugging tests, a server shutdown has never been observed. However, there was just
 one instance that server kicked everybody but stayed online. The causing error has been identified.
 
-#### Input-Output Mix up
+#### Input-Output Mix up (solved)
 
 Input and output streams are fed through the same channel, the same terminal. So when more than
 one people are texting at the same time, output of a received message will interrupt the
@@ -420,7 +443,7 @@ A filter function is added to solve this.
 
 Utf-8 is not enough.
 
-#### Prompts
+#### Prompts (solved)
 
 For some reason, prompts don't get displayed properly. This is not about "Enter your message:"
 showing up more than 1 line above your cursor, it is what should happen. Sometimes this
