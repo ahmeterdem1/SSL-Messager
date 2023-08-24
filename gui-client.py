@@ -47,16 +47,19 @@ class Entry(QWidget):
         sub_widget3 = QWidget()
 
         self.username = QLineEdit()
+        self.username.returnPressed.connect(self.auth)
         sub_layout1.addWidget(QLabel("Username: "))
         sub_layout1.addWidget(self.username)
         sub_widget1.setLayout(sub_layout1)
 
         self.password = QLineEdit()
+        self.password.returnPressed.connect(self.auth)
         sub_layout2.addWidget(QLabel("Password: "))
         sub_layout2.addWidget(self.password)
         sub_widget2.setLayout(sub_layout2)
 
         self.target = QLineEdit()
+        self.target.returnPressed.connect(self.auth)
         sub_layout3.addWidget(QLabel("Target: "))
         sub_layout3.addWidget(self.target)
         sub_widget3.setLayout(sub_layout3)
@@ -73,13 +76,21 @@ class Entry(QWidget):
         global username, password
         username = self.username.text()
         password = self.password.text()
+        # so that server does not break down by receiving empty username and passwords
+        if username == "":
+            username = "*"
+        if password == "":
+            password = "*"
         if self.put and self.resend_allowed:
             self.socket.write(bytes(f"PUT {username} {password} \r\n", "utf-8"))
         elif self.resend_allowed:
             self.socket.write(bytes(f"AUTH {username} {password} \r\n", "utf-8"))
 
     def exit(self):
-        self.socket.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
+        try:
+            self.socket.write(bytes(f"CMD <group> {token} \r\n", "utf-8"))
+        except:
+            pass
         self.close()
 
 
@@ -686,6 +697,7 @@ class Widget(QWidget):
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
 
     def download(self):
+        global down
         """
         Manages downloads. Main load is received through the
         "receiver" thread.
@@ -705,6 +717,7 @@ class Widget(QWidget):
 
         self.download_function = False
         self.download_started = False
+        down = False
 
 
 
@@ -759,6 +772,9 @@ def receiver(auth, main, sock: ssl.SSLSocket):
                 main.error_received_trigger.click()
             elif mes[0] == "CMD":
                 res = " ".join(mes[1:-1])
+                if res == "<file send complete>":
+                    down = True
+                    main.download_started = False
                 main.error_info = "Command response"
                 main.error_explanation = res
                 main.error_received_trigger.click()
@@ -772,7 +788,7 @@ def receiver(auth, main, sock: ssl.SSLSocket):
             elif mes[0] == "BEGIN":
                 # i just copied it from the terminal client
                 amount = int(mes[1])
-                down = True
+                #down = True
                 main.download_started = True
                 for k in range(amount):
                     new_file = sock.read(4096)
@@ -790,7 +806,7 @@ def receiver(auth, main, sock: ssl.SSLSocket):
                                     break
                             save.write(data)
                 main.download_started = False
-                down = False
+                down = True
     except ConnectionResetError:
         pass
     except socket.timeout:
