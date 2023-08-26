@@ -177,7 +177,11 @@ def intro_handler(connection, address):
     """
     global data_list, object_list, conn_list, token_list, f, allowance
     data_list.append(threading.get_ident())
-    mes = connection.read(4096)
+    connection.settimeout(60)
+    try:
+        mes = connection.read(4096)
+    except socket.timeout:
+        return
     mes = str(mes)[2:-1].split(" ")
     if not (mes[0] == "AUTH" or mes[0] == "PUT"):
         connection.write(bytes("END * <incorrect protocol> \r\n", "utf-8"))
@@ -259,6 +263,7 @@ def handler(con, ip, port, user, t):
     received = 0
     try:
         while True:
+            con.settimeout(600)
             me = con.read(4096)  #changed the name of this so i can log it as the last query
             mes = str(me)[2:-1].split(" ")
             received = str(mes[-2])
@@ -408,6 +413,18 @@ def handler(con, ip, port, user, t):
         except:
             pass
 
+    except socket.timeout:
+        try:
+            object_list[user].write(bytes("END <timeout> \r\n", "utf-8"))
+        except:
+            pass
+        kick(user)
+        date = time.asctime()
+        with open("UserError.txt", "a") as er:
+            er.write("\n----------\n")
+            er.write(f"Timeout at {date} from {user}\n")
+            er.write(f"User info: {user} | {ip}:{port} | {t}\n")
+            er.write("No query received\n")
     except IndexError as e:
         try:
             object_list[user].write(bytes("END <an error has occured - consult the admin> \r\n", "utf-8"))
@@ -615,6 +632,7 @@ def put_handler(con, ip, port, control):
                 con.write(bytes("TRY <username already taken> \r\n", "utf-8"))
             else:
                 con.write(bytes("TRY <disallowed characters or length> \r\n", "utf-8"))
+            con.settimeout(60)
             mess = con.read(4096)
             mess = str(mess)[2:-1].split(" ")
             if len(mess[1]) > 15:
@@ -648,7 +666,12 @@ def put_handler(con, ip, port, control):
             count += 1
         if count > 59:
             con.write(bytes("END <too many trials> \r\n", "utf-8"))
+            object_list.pop(temp_name)
             con.close()
+    except socket.timeout:
+        con.write(bytes("END <timeout> \r\n", "utf-8"))
+        object_list.pop(temp_name)
+        con.close()
     except:
         object_list.pop(temp_name)
         con.close()

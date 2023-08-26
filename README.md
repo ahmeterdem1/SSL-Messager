@@ -109,6 +109,8 @@ To check if a client socket is online, server tries to send the following messag
 
 `CHECK \r\n`
 
+Now this is replaced by timeouts on sockets. This query used to cause many breakdowns on the system.
+
 If any sent query is not in the form stated above, server sends the following query and closes down
 the socket unilaterally:
 
@@ -534,7 +536,7 @@ message to this person, a mix up occurres due to more than one thread trying to 
 socket. Testing with some older version of the server, "Bad file descriptor" error generated with
 this exact same principle. Now a queue system has been implemented. No more errors.
 
-#### Upload timeout (caused by the socket library itself)
+#### Upload timeout (caused by the socket library itself, solved)
 
 Write operations on sockets have timeouts. The hardcoded file size limit on the server is 100mb but
 this does not mean that you can upload that much of data. It depends on your upload speeds. Upload
@@ -542,3 +544,5 @@ should take less time than the timeout of the write operation. This will be prop
 the near future with spreading the write operation on multiple linear instances (no threading, yet).
 
 I set the timeouts to "None" before FTP operations, i did not check if it works. Maybe it does.
+
+An 80mb upload has been accomplished with the above stated setup. So the problem is solved i guess.
