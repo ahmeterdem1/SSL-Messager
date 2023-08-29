@@ -64,6 +64,16 @@ the top right corner of your screen.
 Due to gui appearing always on group chat and some data parsing differences, terminal
 and gui client are not compatible with each other.
 
+### Functionality on Style
+
+Everybody that messages you gets assigned a random color and their messages always show
+up with this color. Your messages always show up white. Possible assignment colors do
+not include white. A better distinction of messages is possible with this. 
+
+However there is a technical side to this story, everybody that has messaged you gets 
+saved in a dict. As you stay on the app this dict hypothetically gets bigger and bigger.
+This may slow down the program. A simple restart will kindly solve this issue.
+
 ## Protocol
 
 Without any user online, server just sits silently. When a user is trying to log in,
