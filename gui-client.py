@@ -1,4 +1,8 @@
-import sys, time, socket, ssl, os, threading
+import socket, ssl, os, threading
+from random import choice
+from signal import pthread_kill, SIGKILL
+from time import asctime, sleep
+from sys import argv
 from PySide6.QtWidgets import QApplication, QPushButton, QLabel, QWidget, \
     QVBoxLayout, QMessageBox, QTabWidget, QHBoxLayout, \
     QLineEdit, QScrollArea
@@ -34,6 +38,7 @@ class Entry(QWidget):
 
         self.socket = sock
         self.send = QPushButton("Enter the chat")
+        self.send.setStyleSheet("background: lightgreen; color: black; border-radius: 3px; height: 20px; width: 130px;")
         self.send.clicked.connect(self.auth)
         self.put = sign_up
         self.info = QLabel("")
@@ -114,6 +119,14 @@ class Widget(QWidget):
         self.function_list = [self.change_target, self.mute_function, self.unmute_function, self.upload_function, self.download_function]
         self.upload_started = False
         self.download_started = False
+        self.the_other_thread = 0
+
+        self.send_setting = "background: red; border-radius: 3px; height: 20px; width: 50px;"
+        self.color_list = ("red", "pink", "green", "lightgreen", "aqua", "yellow", "orange",
+                           "purple", "bisque", "cornflowerblue", "crimson", "lightcoral")
+        self.users = dict()
+        # :online: could be carried to client side only in the future thanks to this
+        # Only difference would be that, for this list to be filled, the user must have messaged you.
 
         self.error_received_trigger = QPushButton()
         self.error_received_trigger.clicked.connect(self.error_received)
@@ -133,56 +146,73 @@ class Widget(QWidget):
         tabs = QTabWidget(self)
         general_layout = QVBoxLayout()
         self.status = QLabel("")
+        self.status.setStyleSheet("font-style: italic;")
         self.status_group = QLabel("")
 
         self.quit_button = QPushButton("Quit")
+        self.quit_button.setStyleSheet(self.send_setting + " color: black;")
         self.quit_button.clicked.connect(self.quit)
 
         self.online_button = QPushButton("Online")
+        self.online_button.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 70px;")
         self.online_button.clicked.connect(self.online)
 
         self.new_target_button = QPushButton("New Target")
+        self.new_target_button.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 100px;")
         self.new_target_button.clicked.connect(self.new_target)
 
         self.upload_button = QPushButton("Upload")
+        self.upload_button.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 70px;")
         self.upload_button.clicked.connect(self.upload)
 
         self.download_button = QPushButton("Download")
+        self.download_button.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 80px;")
         self.download_button.clicked.connect(self.download)
 
         self.help_button = QPushButton("Help")
+        self.help_button.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 40px;")
         self.help_button.clicked.connect(self.help)
 
         self.mute_button = QPushButton("Mute")
+        self.mute_button.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 40px;")
         self.mute_button.clicked.connect(self.mute)
 
         self.unmute_button = QPushButton("Unmute")
+        self.unmute_button.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 70px;")
         self.unmute_button.clicked.connect(self.unmute)
 
 
 
         self.quit_button_group = QPushButton("Quit")
+        self.quit_button_group.setStyleSheet(self.send_setting + " color: black;")
         self.quit_button_group.clicked.connect(self.quit)
 
         self.online_button_group = QPushButton("Online")
+        self.online_button_group.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 70px;")
         self.online_button_group.clicked.connect(self.online)
 
         self.new_target_button_group = QPushButton("New Target")
+        self.new_target_button_group.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 100px;")
         self.new_target_button_group.clicked.connect(self.new_target)
 
         self.upload_button_group = QPushButton("Upload")
+        self.upload_button_group.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 70px;")
         self.upload_button_group.clicked.connect(self.upload)
 
         self.download_button_group = QPushButton("Download")
+        self.download_button_group.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 80px;")
         self.download_button_group.clicked.connect(self.download)
 
         self.help_button_group = QPushButton("Help")
+        self.help_button_group.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 40px;")
         self.help_button_group.clicked.connect(self.help)
 
         self.mute_button_group = QPushButton("Mute")
+        self.mute_button_group.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 40px;")
         self.mute_button_group.clicked.connect(self.mute)
 
         self.unmute_button_group = QPushButton("Unmute")
+        self.unmute_button_group.setStyleSheet("background: orange; color: black; border-radius: 3px; height: 20px; width: 70px;")
         self.unmute_button_group.clicked.connect(self.unmute)
 
 
@@ -192,6 +222,7 @@ class Widget(QWidget):
         self.private_edit = QLineEdit()
         self.private_edit.returnPressed.connect(self.send)
         self.private_send = QPushButton("Send")
+        self.private_send.setStyleSheet(self.send_setting)
         self.private_send.clicked.connect(self.send)
 
         #  Globals for group chat
@@ -200,6 +231,7 @@ class Widget(QWidget):
         self.group_edit = QLineEdit()
         self.group_edit.returnPressed.connect(self.sendg)
         self.group_send = QPushButton("Send")
+        self.group_send.setStyleSheet(self.send_setting)
         self.group_send.clicked.connect(self.sendg)
 
         #  Private chat setup
@@ -222,6 +254,7 @@ class Widget(QWidget):
         commands_widget.setLayout(commands_layout)
 
         self.private_scroll = QScrollArea()
+        self.private_scroll.setStyleSheet("background: black;")
         self.private_messages_widget.setLayout(self.private_messages_layout)
 
         self.private_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
@@ -264,6 +297,7 @@ class Widget(QWidget):
         commands_group_widget.setLayout(commands_group_layout)
 
         self.group_scroll = QScrollArea()
+        self.group_scroll.setStyleSheet("background: black;")
         self.group_messages_widget.setLayout(self.group_messages_layout)
 
         self.group_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
@@ -298,6 +332,10 @@ class Widget(QWidget):
         """
         if program_allowed and not self.upload_function and not self.download_function:
             self.socket.write(bytes(f"END {self.token} \r\n", "utf-8"))
+            try:
+                pthread_kill(self.the_other_thread, SIGKILL)
+            except:
+                pass
             self.close()
         elif self.upload_function or self.download_function:
             QMessageBox.information(self, "Wait", "Wait until FTP action ends", QMessageBox.StandardButton.Ok)
@@ -328,7 +366,9 @@ class Widget(QWidget):
             self.change_target = True
             QMessageBox.information(self, "Change Target", "Input the new target in the text area below", QMessageBox.StandardButton.Ok)
             self.private_send.setText("Change Target")
+            self.private_send.setStyleSheet("background: red; border-radius: 3px; height: 20px; width: 100px;")
             self.group_send.setText("Change Target")
+            self.group_send.setStyleSheet("background: red; border-radius: 3px; height: 20px; width: 100px;")
         else:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
 
@@ -344,7 +384,7 @@ class Widget(QWidget):
             message = message.replace("ö", "o").replace("Ö", "O").replace("ğ", "g").replace("Ğ", "G").replace("ş", "s")
             message = message.replace("Ş", "S").replace("ç", "c").replace("Ç", "C")
             self.socket.write(bytes(f"MSG {self.target} {self.username} {message} {self.token} \r\n", "utf-8"))
-            date = time.asctime()
+            date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
             your_text = f"You> {message} -- {date}"
@@ -361,7 +401,9 @@ class Widget(QWidget):
             self.status.setText(self.target)
             self.status_group.setText(self.target)
             self.private_send.setText("Send")
+            self.private_send.setStyleSheet(self.send_setting)
             self.group_send.setText("Send")
+            self.group_send.setStyleSheet(self.send_setting)
             self.private_edit.setText("")
             self.group_edit.setText("")
             self.change_target = False
@@ -372,7 +414,9 @@ class Widget(QWidget):
                 QMessageBox.information(self, "Typo", "Incorrect format for username list", QMessageBox.StandardButton.Ok)
                 self.mute_function = False
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
             else:
@@ -382,7 +426,9 @@ class Widget(QWidget):
                 QMessageBox.information(self, "Muted", "Users muted", QMessageBox.StandardButton.Ok)
                 self.mute_function = False
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
 
@@ -393,7 +439,9 @@ class Widget(QWidget):
                                         QMessageBox.StandardButton.Ok)
                 self.unmute_function = False
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
             else:
@@ -404,7 +452,9 @@ class Widget(QWidget):
                 QMessageBox.information(self, "Unmuted", "Users unmuted", QMessageBox.StandardButton.Ok)
                 self.unmute_function = False
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
 
@@ -427,7 +477,7 @@ class Widget(QWidget):
                     tout = 0
 
                     while (tout < 1500 and not up_permit) and not not_permitted:
-                        time.sleep(0.01)
+                        sleep(0.01)
                         tout += 1
 
                     if up_permit:
@@ -442,7 +492,9 @@ class Widget(QWidget):
                     self.upload_function = False
                     self.upload_started = False
                     self.private_send.setText("Send")
+                    self.private_send.setStyleSheet(self.send_setting)
                     self.group_send.setText("Send")
+                    self.group_send.setStyleSheet(self.send_setting)
                     self.private_edit.setText("")
                     self.group_edit.setText("")
             except Exception as e:
@@ -450,7 +502,9 @@ class Widget(QWidget):
                 self.upload_started = False
                 QMessageBox.information(self, "Error", f"Error: {e}", QMessageBox.StandardButton.Ok)
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
 
@@ -466,7 +520,7 @@ class Widget(QWidget):
             message = message.replace("Ş", "S").replace("ç", "c").replace("Ç", "C")
             self.socket.write(bytes(f"MSGG {self.username} {message} {self.token} \r\n", "utf-8"))
             self.group_label_amount += 1
-            date = time.asctime()
+            date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
             your_text = f"You>: {message} -- {date}"
@@ -482,7 +536,9 @@ class Widget(QWidget):
             self.status.setText(self.target)
             self.status_group.setText(self.target)
             self.private_send.setText("Send")
+            self.private_send.setStyleSheet(self.send_setting)
             self.group_send.setText("Send")
+            self.group_send.setStyleSheet(self.send_setting)
             self.private_edit.setText("")
             self.group_edit.setText("")
             self.change_target = False
@@ -494,7 +550,9 @@ class Widget(QWidget):
                                         QMessageBox.StandardButton.Ok)
                 self.mute_function = False
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
             else:
@@ -504,7 +562,9 @@ class Widget(QWidget):
                 QMessageBox.information(self, "Muted", "Users muted", QMessageBox.StandardButton.Ok)
                 self.mute_function = False
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
 
@@ -515,7 +575,9 @@ class Widget(QWidget):
                                         QMessageBox.StandardButton.Ok)
                 self.unmute_function = False
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
             else:
@@ -526,7 +588,9 @@ class Widget(QWidget):
                 QMessageBox.information(self, "Unmuted", "Users unmuted", QMessageBox.StandardButton.Ok)
                 self.unmute_function = False
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
 
@@ -549,7 +613,7 @@ class Widget(QWidget):
                     tout = 0
 
                     while (tout < 1500 and not up_permit) and not not_permitted:
-                        time.sleep(0.01)
+                        sleep(0.01)
                         tout += 1
 
                     if up_permit:
@@ -564,7 +628,9 @@ class Widget(QWidget):
                     self.upload_function = False
                     self.upload_started = False
                     self.private_send.setText("Send")
+                    self.private_send.setStyleSheet(self.send_setting)
                     self.group_send.setText("Send")
+                    self.group_send.setStyleSheet(self.send_setting)
                     self.private_edit.setText("")
                     self.group_edit.setText("")
             except Exception as e:
@@ -572,7 +638,9 @@ class Widget(QWidget):
                 self.upload_started = False
                 QMessageBox.information(self, "Error", f"Error: {e}", QMessageBox.StandardButton.Ok)
                 self.private_send.setText("Send")
+                self.private_send.setStyleSheet(self.send_setting)
                 self.group_send.setText("Send")
+                self.group_send.setStyleSheet(self.send_setting)
                 self.private_edit.setText("")
                 self.group_edit.setText("")
 
@@ -584,11 +652,18 @@ class Widget(QWidget):
         """
         if program_allowed and self.private_who not in mute_list:
             self.private_label_amount += 1
-            date = time.asctime()
+            date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
             the_text = f"> {self.private_who}: {self.private_what} -- {date}"
-            self.private_messages_layout.addWidget(QLabel(the_text))
+            message = QLabel(the_text)
+            try:
+                if self.users[self.private_who]:  # This will be always true if set
+                    message.setStyleSheet(f"background: black; color: {self.users[self.private_who]};")
+            except:
+                self.users[self.private_who] = choice(self.color_list)
+                message.setStyleSheet(f"background: black; color: {self.users[self.private_who]};")
+            self.private_messages_layout.addWidget(message)
             self.private_scroll.verticalScrollBar().setValue(2000 * self.private_label_amount)
         elif not program_allowed:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
@@ -601,11 +676,18 @@ class Widget(QWidget):
         """
         if program_allowed and self.group_who not in mute_list:
             self.group_label_amount += 1
-            date = time.asctime()
+            date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
             the_text = f"group> {self.group_who}: {self.group_what} -- {date}"
-            self.group_messages_layout.addWidget(QLabel(the_text))
+            message = QLabel(the_text)
+            try:
+                if self.users[self.private_who]:  # This will be always true if set
+                    message.setStyleSheet(f"background: black; color: {self.users[self.private_who]};")
+            except:
+                self.users[self.private_who] = choice(self.color_list)
+                message.setStyleSheet(f"background: black; color: {self.users[self.private_who]};")
+            self.group_messages_layout.addWidget(message)
             self.group_scroll.verticalScrollBar().setValue(2000 * self.group_label_amount)
         elif not program_allowed:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
@@ -635,7 +717,9 @@ class Widget(QWidget):
                 k = False
             self.unmute_function = True
             self.private_send.setText("Unmute")
+            self.private_send.setStyleSheet("background: red; color: white; border-radius: 3px; height: 20px; width: 70px;")
             self.group_send.setText("Unmute")
+            self.group_send.setStyleSheet("background: red; color: white; border-radius: 3px; height: 20px; width: 70px;")
             QMessageBox.information(self, "Unmute", "Type the usernames to unmute below", QMessageBox.StandardButton.Ok)
         else:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
@@ -668,8 +752,12 @@ class Widget(QWidget):
         mute --> Mutes inputted users.
         unmute --> unmutes inputted users.
         """
-        self.private_messages_layout.addWidget(QLabel(help_message))
-        self.group_messages_layout.addWidget(QLabel(help_message))
+        message1 = QLabel(help_message)
+        message2 = QLabel(help_message)
+        message1.setStyleSheet("background: black; color: #EBCF34;")
+        message2.setStyleSheet("background: black; color: #ebcf34;")
+        self.private_messages_layout.addWidget(message1)
+        self.group_messages_layout.addWidget(message2)
         self.private_label_amount += 5  # becaause this is longer
         self.group_label_amount += 5
         self.private_scroll.verticalScrollBar().setValue(2000 * self.private_label_amount)
@@ -691,7 +779,9 @@ class Widget(QWidget):
                 k = False
             self.upload_function = True
             self.private_send.setText("Upload")
+            self.private_send.setStyleSheet("background: red; color: white; border-radius: 3px; height: 20px; width: 70px;")
             self.group_send.setText("Upload")
+            self.group_send.setStyleSheet("background: red; color: white; border-radius: 3px; height: 20px; width: 70px;")
             QMessageBox.information(self, "Upload", "Type the filepath below", QMessageBox.StandardButton.Ok)
         else:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
@@ -711,7 +801,7 @@ class Widget(QWidget):
             self.download_function = True
             self.socket.write(bytes(f"CMD <get> {token} \r\n", "utf-8"))
             while not down:
-                time.sleep(0.01)
+                sleep(0.01)
         else:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
 
@@ -730,6 +820,7 @@ def receiver(auth, main, sock: ssl.SSLSocket):
     :return: None
     """
     global token, program_allowed, up_permit, not_permitted, down
+    main.the_other_thread = threading.get_ident()
     try:
         while True:
             sock.settimeout(None)
@@ -821,7 +912,7 @@ def receiver(auth, main, sock: ssl.SSLSocket):
 
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QApplication(argv)
     try:
         with socket.create_connection(address, timeout=30) as out:
             #217.131.197.5
