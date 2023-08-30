@@ -74,6 +74,16 @@ However there is a technical side to this story, everybody that has messaged you
 saved in a dict. As you stay on the app this dict hypothetically gets bigger and bigger.
 This may slow down the program. A simple restart will kindly solve this issue.
 
+### Uploads
+
+A lazy function is used in order to read from the source and write to the socket. Why?
+I want to display percentage of data sent in the future. Still not quite there yet but
+will be. I have left some of the code that I have tried as comments. Same lazy read 
+implementation will be used in the server too.
+
+I have left out a print() to display percentages. So it kinda functions? But not in gui
+I guess. Yet.
+
 ## Protocol
 
 Without any user online, server just sits silently. When a user is trying to log in,

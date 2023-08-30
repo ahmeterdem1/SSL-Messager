@@ -24,7 +24,28 @@ mute_list = list()
 up_permit = False
 not_permitted = False
 down = False
+#file_sent = False
 
+
+def file_gen(file):
+    while True:
+        data = file.read(4096)
+        if len(data) == 0:
+            break
+        yield data
+
+
+"""def file_sender(main, number, file, number_of_packets):
+    global file_sent
+    for data in file_gen(file):
+        main.socket.write(data)
+        number += 1
+        if not number % 10:
+            percentage = (number / number_of_packets) * 100
+            print(percentage)
+            main.status.setText(f"{percentage:.2f}%")
+    main.socket.write(bytes(f"ENDF {main.token} \r\n", "utf-8"))
+    file_sent = True"""
 
 class Entry(QWidget):
     """
@@ -377,7 +398,7 @@ class Widget(QWidget):
         Sends messages, connected to the private chat tab.
         :return: None
         """
-        global mute_list
+        global mute_list, file_sent
         if program_allowed and not self.change_target and not self.mute_function \
                 and not self.unmute_function and not self.upload_function and not self.download_function:
 
@@ -472,7 +493,8 @@ class Widget(QWidget):
             try:
                 size = os.stat(path).st_size
                 with open(path, "rb") as up:
-                    upload = up.read()
+                    #upload = up.read()
+                    number_of_packets = (size // 4096) + 1
                     if os.name == "nt" and "\\" in path:
                         path = path.replace(" ", "_")
                         extension = path.split("\\")[-1]
@@ -492,8 +514,23 @@ class Widget(QWidget):
                     if up_permit:
                         self.upload_started = True
                         self.socket.settimeout(None)
-                        s.write(upload)
-                        s.write(bytes(f"ENDF {self.token} \r\n", "utf-8"))
+                        n = 0
+                        """th = threading.Thread(target=file_sender, args=[self, n, up, number_of_packets])
+                        th.start()"""
+                        """while not file_sent:
+                            sleep(0.05)"""
+                        #file_sent = False
+                        #th.join()
+                        for data in file_gen(up):
+                            self.socket.write(data)
+                            n += 1
+                            if not n % 10:
+                                percentage = (n / number_of_packets) * 100
+                                print(percentage)
+                                #self.status.setText(f"{percentage:.2f}%")
+                        #s.write(upload)
+                        self.socket.write(bytes(f"ENDF {self.token} \r\n", "utf-8"))
+                        #self.status.setText(self.target)
                         self.upload_started = False
                     else:
                         QMessageBox.information(self, "Upload", "Upload not permitted", QMessageBox.StandardButton.Ok)
@@ -616,8 +653,9 @@ class Widget(QWidget):
             path = self.group_edit.text()
             try:
                 size = os.stat(path).st_size
+                number_of_packets = (size // 4096) + 1
                 with open(path, "rb") as up:
-                    upload = up.read()
+                    #upload = up.read()
                     if os.name == "nt" and "\\" in path:
                         path = path.replace(" ", "_")
                         extension = path.split("\\")[-1]
@@ -637,7 +675,14 @@ class Widget(QWidget):
                     if up_permit:
                         self.upload_started = True
                         self.socket.settimeout(None)
-                        s.write(upload)
+                        #s.write(upload)
+                        n = 0
+                        for data in file_gen(up):
+                            self.socket.write(data)
+                            n += 1
+                            if not n % 10:
+                                percentage = (n / number_of_packets) * 100
+                                print(percentage)
                         s.write(bytes(f"ENDF {self.token} \r\n", "utf-8"))
                         self.upload_started = False
                     else:
@@ -962,4 +1007,9 @@ if __name__ == "__main__":
     except Exception as e:
         QMessageBox.information(None, "Unexpected error", f"Error: {e}", QMessageBox.StandardButton.Ok)
         app.exec()
+    finally:
+        try:
+            pthread_kill(window.the_other_thread, SIGKILL)
+        except:
+            pass
 
