@@ -380,14 +380,23 @@ class Widget(QWidget):
         global mute_list
         if program_allowed and not self.change_target and not self.mute_function \
                 and not self.unmute_function and not self.upload_function and not self.download_function:
-            message = self.private_edit.text().replace("ı", "i").replace("İ", "I").replace("ü", "u").replace("Ü", "U")
+
+            message = self.private_edit.text()
+            if len(message) > 4000:
+                QMessageBox.information(self, "Too Long", "Your message exceeds 4000 character limit.", QMessageBox.StandardButton.Ok)
+                return
+
+            message = message.replace("ı", "i").replace("İ", "I").replace("ü", "u").replace("Ü", "U")
             message = message.replace("ö", "o").replace("Ö", "O").replace("ğ", "g").replace("Ğ", "G").replace("ş", "s")
             message = message.replace("Ş", "S").replace("ç", "c").replace("Ç", "C")
+
             self.socket.write(bytes(f"MSG {self.target} {self.username} {message} {self.token} \r\n", "utf-8"))
+
             date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
             your_text = f"You> {message} -- {date}"
+
             self.private_messages_layout.addWidget(QLabel(your_text))
             self.private_label_amount += 1
             self.private_edit.setText("")
@@ -515,15 +524,24 @@ class Widget(QWidget):
         """
         if program_allowed and not self.change_target and not self.mute_function \
                 and not self.unmute_function and not self.upload_function:
-            message = self.group_edit.text().replace("ı", "i").replace("İ", "I").replace("ü", "u").replace("Ü", "U")
+
+            message = self.group_edit.text()
+            if len(message) > 4000:
+                QMessageBox.information(self, "Too Long", "Your message exceeds 4000 character limit.", QMessageBox.StandardButton.Ok)
+                return
+
+            message = message.replace("ı", "i").replace("İ", "I").replace("ü", "u").replace("Ü", "U")
             message = message.replace("ö", "o").replace("Ö", "O").replace("ğ", "g").replace("Ğ", "G").replace("ş", "s")
             message = message.replace("Ş", "S").replace("ç", "c").replace("Ç", "C")
+
             self.socket.write(bytes(f"MSGG {self.username} {message} {self.token} \r\n", "utf-8"))
             self.group_label_amount += 1
+
             date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
             your_text = f"You>: {message} -- {date}"
+
             self.group_messages_layout.addWidget(QLabel(your_text))
             self.group_edit.setText("")
             self.group_scroll.verticalScrollBar().setValue(2000 * self.group_label_amount)

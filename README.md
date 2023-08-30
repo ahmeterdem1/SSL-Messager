@@ -218,7 +218,7 @@ to a different socket than the message protocol.
 
 ### Important notes on the protocol
 
-- Every query ends with "\r\n" but this does not serve a purpose for now.
+- Every query ends with "\r\n", this is a must and is checked by the server.
 - Server messages about errors are written inside <> sings
 - Server sends the token once whilst authorizing
 - Client sends its token at each query for validation
@@ -556,3 +556,13 @@ the near future with spreading the write operation on multiple linear instances 
 I set the timeouts to "None" before FTP operations, i did not check if it works. Maybe it does.
 
 An 80mb upload has been accomplished with the above stated setup. So the problem is solved i guess.
+
+#### Too Long Messages (solved, was a non-issue)
+
+Too long messages result in queries longer than 4096 bytes. But server reads messages by 4kb packets.
+If your message is too long, \r\n part gets excluded, changed parsing conditions may result in your
+token not being recognized by the server. By the same way, your token may be outside of 4kb range
+and not even get read. A client side hard coded limit of 4000 character limit is implemented. And
+in case, server checks for \r\n now. It didn't need to though. This issue would result in user being
+kicked and that's it. Who writes longer than 4k character messages? And even then, the effective 
+limit is around 4070 - 4080.

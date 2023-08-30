@@ -183,7 +183,7 @@ def intro_handler(connection, address):
     except socket.timeout:
         return
     mes = str(mes)[2:-1].split(" ")
-    if not (mes[0] == "AUTH" or mes[0] == "PUT"):
+    if not (mes[0] == "AUTH" or mes[0] == "PUT") and not mes[-1] == "\r\n":
         connection.write(bytes("END * <incorrect protocol> \r\n", "utf-8"))
         connection.close()
     elif mes[0] == "PUT" and not (mes[1] in f.keys()):
@@ -269,7 +269,7 @@ def handler(con, ip, port, user, t):
             received = str(mes[-2])
             if received != str(t):
                 break
-            if mes[0] == "MSG":
+            if mes[0] == "MSG" and mes[-1] == "\r\n":
                 if not (mes[1] in conn_list.keys()):
                     con.write(bytes("CNT <user not online> \r\n", "utf-8"))
                 elif mes[2] not in token_list.keys():
@@ -287,7 +287,7 @@ def handler(con, ip, port, user, t):
                     res = " ".join(mes[3:-2])
                     object_list[mes[1]].write(bytes(f"RELAY {mes[1]} {mes[2]} {res} \r\n", "utf-8"))
 
-            elif mes[0] == "MSGG":
+            elif mes[0] == "MSGG" and mes[-1] == "\r\n":
                 if mes[1] not in token_list.keys():
                     break
                 elif token_list[user] != token_list[mes[1]]:
@@ -304,7 +304,7 @@ def handler(con, ip, port, user, t):
                             continue
                         object_list[k].write(bytes(f"RELAYG {mes[1]} {res} \r\n", "utf-8"))
 
-            elif mes[0] == "CMD":
+            elif mes[0] == "CMD" and mes[-1] == "\r\n":
                 if mes[1] == "<online>":
                     l = list(object_list.keys())
                     res = " ".join(l[:100])  # sends only the first 100 people online
@@ -338,12 +338,12 @@ def handler(con, ip, port, user, t):
                 elif mes[1] == "<group>":
                     group_list[user] = not group_list[user]
 
-            elif mes[0] == "END":
+            elif mes[0] == "END" and mes[-1] == "\r\n":
                 con.write(bytes("END <end accepted> \r\n", "utf-8"))
                 kick(user)
                 break
 
-            elif mes[0] == "BEGINF":
+            elif mes[0] == "BEGINF" and mes[-1] == "\r\n":
                 if received != str(token_list[user]):
                     break
                 declared_size = int(mes[3])
@@ -376,6 +376,7 @@ def handler(con, ip, port, user, t):
                             str_data = str(new_data)[2:-1].split(" ")
                             if len(str_data) >= 3:
                                 if str_data[-3] == "ENDF" and str_data[-2] == str(t):
+                                    # Don't need to check for \r\n here
                                     if not len(str_data) == 3:
                                         last_data = bytes(" ".join(list(str_data)[:-3]))
                                         new_file.write(last_data)
@@ -697,7 +698,7 @@ try:
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         #172.31.19.23
-        server.bind(("192.168.1.15", 4000))
+        server.bind(("192.168.1.22", 4000))
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:
