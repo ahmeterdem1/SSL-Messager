@@ -1,6 +1,7 @@
 import socket, ssl, os, threading
 from random import choice
-from signal import pthread_kill, SIGKILL
+if os.name == "posix":
+    from signal import pthread_kill, SIGKILL
 from time import asctime, sleep
 from sys import argv
 from PySide6.QtWidgets import QApplication, QPushButton, QLabel, QWidget, \
@@ -142,7 +143,7 @@ class Widget(QWidget):
         self.download_started = False
         self.the_other_thread = 0
 
-        self.send_setting = "background: red; border-radius: 3px; height: 20px; width: 50px;"
+        self.send_setting = "background: lime; color: black; border-radius: 3px; height: 20px; width: 50px;"
         self.color_list = ("red", "pink", "green", "lightgreen", "aqua", "yellow", "orange",
                            "purple", "bisque", "cornflowerblue", "crimson", "lightcoral")
         self.users = dict()
@@ -152,6 +153,10 @@ class Widget(QWidget):
         self.meme_list = {":bruh:": "../ssl-emoji/bruh.jpeg", ":hm:": "../ssl-emoji/hm.jpeg",
                           ":swag:": "../ssl-emoji/swag.jpeg", ":eee:": "../ssl-emoji/eee.jpeg",
                           ":iii:": "../ssl-emoji/iii.jpeg", ":ohom:": "../ssl-emoji/ohom.jpeg"}
+        if os.name == "nt":
+            self.meme_list = {":bruh:": r"..\ssl-emoji\bruh.jpeg", ":hm:": r"..\ssl-emoji\hm.jpeg",
+                              ":swag:": r"..\ssl-emoji\swag.jpeg", ":eee:": r"..\ssl-emoji\eee.jpeg",
+                              ":iii:": r"..\ssl-emoji\iii.jpeg", ":ohom:": r"..\ssl-emoji\ohom.jpeg"}
         # You may change here. Effects will be obviously only on you.
 
         self.error_received_trigger = QPushButton()
@@ -176,7 +181,7 @@ class Widget(QWidget):
         self.status_group = QLabel("")
 
         self.quit_button = QPushButton("Quit")
-        self.quit_button.setStyleSheet(self.send_setting + " color: black;")
+        self.quit_button.setStyleSheet("background: red; color: black; border-radius: 3px; height: 20px; width: 50px;")
         self.quit_button.clicked.connect(self.quit)
 
         self.online_button = QPushButton("Online")
@@ -359,7 +364,8 @@ class Widget(QWidget):
         if program_allowed and not self.upload_function and not self.download_function:
             self.socket.write(bytes(f"END {self.token} \r\n", "utf-8"))
             try:
-                pthread_kill(self.the_other_thread, SIGKILL)
+                if os.name == "posix":
+                    pthread_kill(self.the_other_thread, SIGKILL)
             except:
                 pass
             self.close()
@@ -392,9 +398,9 @@ class Widget(QWidget):
             self.change_target = True
             QMessageBox.information(self, "Change Target", "Input the new target in the text area below", QMessageBox.StandardButton.Ok)
             self.private_send.setText("Change Target")
-            self.private_send.setStyleSheet("background: red; border-radius: 3px; height: 20px; width: 100px;")
+            self.private_send.setStyleSheet("background: lime; color: black; border-radius: 3px; height: 20px; width: 100px;")
             self.group_send.setText("Change Target")
-            self.group_send.setStyleSheet("background: red; border-radius: 3px; height: 20px; width: 100px;")
+            self.group_send.setStyleSheet("background: lime; color: black; border-radius: 3px; height: 20px; width: 100px;")
         else:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
 
@@ -889,9 +895,9 @@ class Widget(QWidget):
                 k = False
             self.unmute_function = True
             self.private_send.setText("Unmute")
-            self.private_send.setStyleSheet("background: red; color: white; border-radius: 3px; height: 20px; width: 70px;")
+            self.private_send.setStyleSheet("background: lime; color: black; border-radius: 3px; height: 20px; width: 70px;")
             self.group_send.setText("Unmute")
-            self.group_send.setStyleSheet("background: red; color: white; border-radius: 3px; height: 20px; width: 70px;")
+            self.group_send.setStyleSheet("background: lime; color: black; border-radius: 3px; height: 20px; width: 70px;")
             QMessageBox.information(self, "Unmute", "Type the usernames to unmute below", QMessageBox.StandardButton.Ok)
         else:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
@@ -951,9 +957,9 @@ class Widget(QWidget):
                 k = False
             self.upload_function = True
             self.private_send.setText("Upload")
-            self.private_send.setStyleSheet("background: red; color: white; border-radius: 3px; height: 20px; width: 70px;")
+            self.private_send.setStyleSheet("background: lime; color: black; border-radius: 3px; height: 20px; width: 70px;")
             self.group_send.setText("Upload")
-            self.group_send.setStyleSheet("background: red; color: white; border-radius: 3px; height: 20px; width: 70px;")
+            self.group_send.setStyleSheet("background: lime; color: black; border-radius: 3px; height: 20px; width: 70px;")
             QMessageBox.information(self, "Upload", "Type the filepath below", QMessageBox.StandardButton.Ok)
         else:
             QMessageBox.information(self, "Log in", "Finalize logging in first", QMessageBox.StandardButton.Ok)
@@ -1118,7 +1124,8 @@ if __name__ == "__main__":
         app.exec()
     finally:
         try:
-            pthread_kill(window.the_other_thread, SIGKILL)
+            if os.name == "posix":
+                pthread_kill(window.the_other_thread, SIGKILL)
         except:
             pass
 
