@@ -146,8 +146,13 @@ class Widget(QWidget):
         self.color_list = ("red", "pink", "green", "lightgreen", "aqua", "yellow", "orange",
                            "purple", "bisque", "cornflowerblue", "crimson", "lightcoral")
         self.users = dict()
-        # :online: could be carried to client side only in the future thanks to this
+        # :online: could be carried to client side only in the future thanks to this.
         # Only difference would be that, for this list to be filled, the user must have messaged you.
+
+        self.meme_list = {":bruh:": "../ssl-emoji/bruh.jpeg", ":hm:": "../ssl-emoji/hm.jpeg",
+                          ":swag:": "../ssl-emoji/swag.jpeg", ":eee:": "../ssl-emoji/eee.jpeg",
+                          ":iii:": "../ssl-emoji/iii.jpeg", ":ohom:": "../ssl-emoji/ohom.jpeg"}
+        # You may change here. Effects will be obviously only on you.
 
         self.error_received_trigger = QPushButton()
         self.error_received_trigger.clicked.connect(self.error_received)
@@ -416,8 +421,33 @@ class Widget(QWidget):
             date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
-            your_text = f"You> {message} -- {date}"
 
+            for k, v in self.meme_list.items():
+                if os.path.exists(v):
+                    message = message.replace(k, f"<img src='{v}'>")
+
+            if "_" in message:
+                to_work = message.split("_")
+                length = len(to_work)
+                if length > 2:
+                    for k in range(length):
+                        if k % 2 == 1 and not k == length - 1:
+                            to_work[k] = f"<em>{to_work[k]}</em>"
+                        elif k == length - 1 and length % 2 == 0:
+                            to_work[k] = f"_{to_work[k]}"
+                    message = "".join(to_work)
+            if "*" in message:
+                to_work = message.split("*")
+                length = len(to_work)
+                if length > 2:
+                    for k in range(length):
+                        if k % 2 == 1 and not k == length - 1:
+                            to_work[k] = f"<b>{to_work[k]}</b>"
+                        elif k == length - 1 and length % 2 == 0:
+                            to_work[k] = f"*{to_work[k]}"
+                    message = "".join(to_work)
+
+            your_text = f"You> {message} -- {date}"
             self.private_messages_layout.addWidget(QLabel(your_text))
             self.private_label_amount += 1
             self.private_edit.setText("")
@@ -577,8 +607,33 @@ class Widget(QWidget):
             date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
-            your_text = f"You>: {message} -- {date}"
 
+            for k, v in self.meme_list.items():
+                if os.path.exists(v):
+                    message = message.replace(k, f"<img src='{v}'>")
+
+            if "_" in message:
+                to_work = message.split("_")
+                length = len(to_work)
+                if length > 2:
+                    for k in range(length):
+                        if k % 2 == 1 and not k == length - 1:
+                            to_work[k] = f"<em>{to_work[k]}</em>"
+                        elif k == length - 1 and length % 2 == 0:
+                            to_work[k] = f"_{to_work[k]}"
+                    message = "".join(to_work)
+            if "*" in message:
+                to_work = message.split("*")
+                length = len(to_work)
+                if length > 2:
+                    for k in range(length):
+                        if k % 2 == 1 and not k == length - 1:
+                            to_work[k] = f"<b>{to_work[k]}</b>"
+                        elif k == length - 1 and length % 2 == 0:
+                            to_work[k] = f"*{to_work[k]}"
+                    message = "".join(to_work)
+
+            your_text = f"You> {message} -- {date}"
             self.group_messages_layout.addWidget(QLabel(your_text))
             self.group_edit.setText("")
             self.group_scroll.verticalScrollBar().setValue(2000 * self.group_label_amount)
@@ -718,7 +773,34 @@ class Widget(QWidget):
             date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
-            the_text = f"> {self.private_who}: {self.private_what} -- {date}"
+            # style preparations before displaying the message
+
+            for k, v in self.meme_list.items():
+                if os.path.exists(v):
+                    self.private_what = self.private_what.replace(k, f"<img src='{v}'>")
+
+            if "_" in self.private_what:
+                to_work = self.private_what.split("_")
+                length = len(to_work)
+                if length > 2:
+                    for k in range(length):
+                        if k % 2 == 1 and not k == length - 1:
+                            to_work[k] = f"<em>{to_work[k]}</em>"
+                        elif k == length - 1 and length % 2 == 0:
+                            to_work[k] = f"_{to_work[k]}"
+                    self.private_what = "".join(to_work)
+            if "*" in self.private_what:
+                to_work = self.private_what.split("*")
+                length = len(to_work)
+                if length > 2:
+                    for k in range(length):
+                        if k % 2 == 1 and not k == length - 1:
+                            to_work[k] = f"<b>{to_work[k]}</b>"
+                        elif k == length - 1 and length % 2 == 0:
+                            to_work[k] = f"*{to_work[k]}"
+                    self.private_what = "".join(to_work)
+
+            the_text = f"> <b>{self.private_who}</b>: {self.private_what} -- {date}"
             message = QLabel(the_text)
             try:
                 if self.users[self.private_who]:  # This will be always true if set
@@ -726,6 +808,7 @@ class Widget(QWidget):
             except:
                 self.users[self.private_who] = choice(self.color_list)
                 message.setStyleSheet(f"background: black; color: {self.users[self.private_who]};")
+           # Displaying of the message
             self.private_messages_layout.addWidget(message)
             self.private_scroll.verticalScrollBar().setValue(2000 * self.private_label_amount)
         elif not program_allowed:
@@ -742,6 +825,32 @@ class Widget(QWidget):
             date = asctime()
             date = date.split(" ")
             date = " ".join(date[1:-1])
+
+            for k, v in self.meme_list.items():
+                if os.path.exists(v):
+                    self.group_what = self.group_what.replace(k, f"<img src='{v}'>")
+
+            if "_" in self.group_what:
+                to_work = self.group_what.split("_")
+                length = len(to_work)
+                if length > 2:
+                    for k in range(length):
+                        if k % 2 == 1 and not k == length - 1:
+                            to_work[k] = f"<em>{to_work[k]}</em>"
+                        elif k == length - 1 and length % 2 == 0:
+                            to_work[k] = f"_{to_work[k]}"
+                    self.group_what = "".join(to_work)
+            if "*" in self.group_what:
+                to_work = self.group_what.split("*")
+                length = len(to_work)
+                if length > 2:
+                    for k in range(length):
+                        if k % 2 == 1 and not k == length - 1:
+                            to_work[k] = f"<b>{to_work[k]}</b>"
+                        elif k == length - 1 and length % 2 == 0:
+                            to_work[k] = f"*{to_work[k]}"
+                    self.group_what = "".join(to_work)
+
             the_text = f"group> {self.group_who}: {self.group_what} -- {date}"
             message = QLabel(the_text)
             try:

@@ -74,6 +74,17 @@ However there is a technical side to this story, everybody that has messaged you
 saved in a dict. As you stay on the app this dict hypothetically gets bigger and bigger.
 This may slow down the program. A simple restart will kindly solve this issue.
 
+### Emotes and user controlled style
+
+I have added emotes as :emote_name:. It works the same as discord. Only difference, you
+may choose which emote command corresponds to what image. A directory named "ssl-emoji"
+is where the images are stored. You may change this of course, and change images and 
+their names too. So I am not posting this directory as a part of the project. It is up
+to user to choose. You may also opt to not use it.
+
+_ and * symbols functions the same as whatsapp. They change the style of the surrounded
+text. _ creates italic text, * creates bold text.
+
 ### Uploads
 
 A lazy function is used in order to read from the source and write to the socket. Why?
