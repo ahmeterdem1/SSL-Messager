@@ -1,0 +1,15 @@
+<config>
+    <connection>
+        <ip>217.131.197.5</ip>
+        <port>4000</port>
+        <timeout>30</timeout>
+    </connection>
+    <ssl>
+        <certpath>../certc.pem</certpath>
+    </ssl>
+    <user>
+        <username>*</username>
+        <password>*</password>
+        <target>*</target>
+    </user>
+</config>

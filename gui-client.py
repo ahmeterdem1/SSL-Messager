@@ -8,11 +8,14 @@ from PySide6.QtWidgets import QApplication, QPushButton, QLabel, QWidget, \
     QVBoxLayout, QMessageBox, QTabWidget, QHBoxLayout, \
     QLineEdit, QScrollArea
 from PySide6.QtCore import Qt
+from playsound import playsound
+import xml.etree.ElementTree as ET
 
 # external configurations
-address = ("217.131.197.5", 4000)
+address = ("", 0)
+timeout = None
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-context.load_cert_chain("../certc.pem", "../certc.pem")
+#context.load_cert_chain("../certc.pem", "../certc.pem")
 context.check_hostname = False
 context.verify_mode &= ~ssl.CERT_REQUIRED
 
@@ -815,6 +818,10 @@ class Widget(QWidget):
                 self.users[self.private_who] = choice(self.color_list)
                 message.setStyleSheet(f"background: black; color: {self.users[self.private_who]};")
            # Displaying of the message
+            try:
+                playsound("./config/notification.mp3", False)
+            except:
+                pass
             self.private_messages_layout.addWidget(message)
             self.private_scroll.verticalScrollBar().setValue(2000 * self.private_label_amount)
         elif not program_allowed:
@@ -865,6 +872,10 @@ class Widget(QWidget):
             except:
                 self.users[self.private_who] = choice(self.color_list)
                 message.setStyleSheet(f"background: black; color: {self.users[self.private_who]};")
+            try:
+                playsound("./config/notification.mp3", False)
+            except:
+                pass
             self.group_messages_layout.addWidget(message)
             self.group_scroll.verticalScrollBar().setValue(2000 * self.group_label_amount)
         elif not program_allowed:
@@ -1092,9 +1103,32 @@ def receiver(auth, main, sock: ssl.SSLSocket):
 if __name__ == "__main__":
     app = QApplication(argv)
     try:
-        with socket.create_connection(address, timeout=30) as out:
+        if not os.path.isdir("config"): raise Exception("Config dir not found")
+        if os.name == "posix":
+            if not os.path.exists("./config/configurations.xml"): raise Exception("configurations.xml not found")
+            tree = ET.parse("./config/configurations.xml")
+            root = tree.getroot()
+            ip = root[0][0].text
+            address = (ip, int(root[0][1].text))
+            timeout = int(root[0][2].text)
+            context.load_cert_chain(root[1][0].text, root[1][0].text)
+            username = root[2][0].text
+            password = root[2][1].text
+            target = root[2][2].text
+        else:
+            if not os.path.exists(".\config\configurations.xml"): raise Exception("configurations.xml not found")
+            tree = ET.parse(".\config\configurations.xml")
+            root = tree.getroot()
+            ip = root[0][0].text
+            address = (ip, int(root[0][1].text))
+            timeout = int(root[0][2].text)
+            context.load_cert_chain(root[1][0].text, root[1][0].text)
+            username = root[2][0].text
+            password = root[2][1].text
+            target = root[2][2].text
+        with socket.create_connection(address, timeout=timeout) as out:
             #217.131.197.5
-            with context.wrap_socket(out, server_hostname="217.131.197.5") as s:
+            with context.wrap_socket(out, server_hostname=ip) as s:
                 res = QMessageBox.question(None, "Sign up", "Do you want to sign up?",
                                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
@@ -1106,6 +1140,11 @@ if __name__ == "__main__":
                 else:
                     authorization_widget = Entry(s, False)
                     authorization_widget.show()
+                if username != "" and username != "*" and password != "" and password != "*" and target != "" and target != "*":
+                    authorization_widget.username.setText(username)
+                    authorization_widget.password.setText(password)
+                    authorization_widget.target.setText(target)
+                    authorization_widget.send.click()
                 threading.Thread(target=receiver, args=[authorization_widget, window, s]).start()
                 # We create invisible buttons that are connected to handler functions to manage threading
 

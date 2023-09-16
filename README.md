@@ -95,6 +95,17 @@ implementation will be used in the server too.
 I have left out a print() to display percentages. So it kinda functions? But not in gui
 I guess. Yet.
 
+### Config
+
+This folder has program configurations in it. These consist of the notifications sound
+and the confiugrations.xml file that is used for internal configurations. The folder
+and the configurations.xml has to exists for the program to work.
+
+configurations.xml provides fast access to internal parameters. Ip - port - timeout
+are all must be configured there. Certificates path must be there too. For fast entry
+to the program, you may choose to fill username - password - target sections. If they
+are filled and are not "*" symbol, then program automatically sends the AUTH query.
+
 ## Protocol
 
 Without any user online, server just sits silently. When a user is trying to log in,
