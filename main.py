@@ -7,7 +7,7 @@ import os
 import secrets
 import sys
 
-#192.168.1.15
+
 conn_list = dict()  #contains the threads
 object_list = dict()  #contains the sockets
 data_list = list()  #contains the thread id's
@@ -698,7 +698,7 @@ try:
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
         #172.31.19.23
-        server.bind(("192.168.1.22", 4000))
+        server.bind(("172.31.19.23", 18443))
         server.listen(5)
 
         with context.wrap_socket(server, server_side=True) as secure_server:

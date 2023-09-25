@@ -1,7 +1,7 @@
 <config>
     <connection>
-        <ip>217.131.197.5</ip>
-        <port>4000</port>
+        <ip>13.50.8.62</ip>
+        <port>18443</port>
         <timeout>30</timeout>
     </connection>
     <ssl>

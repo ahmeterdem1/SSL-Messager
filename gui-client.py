@@ -1103,8 +1103,8 @@ def receiver(auth, main, sock: ssl.SSLSocket):
 if __name__ == "__main__":
     app = QApplication(argv)
     try:
-        if not os.path.isdir("config"): raise Exception("Config dir not found")
         if os.name == "posix":
+            if not os.path.isdir("./config"): raise Exception("Config dir not found")
             if not os.path.exists("./config/configurations.xml"): raise Exception("configurations.xml not found")
             tree = ET.parse("./config/configurations.xml")
             root = tree.getroot()
@@ -1116,6 +1116,7 @@ if __name__ == "__main__":
             password = root[2][1].text
             target = root[2][2].text
         else:
+            if not os.path.isdir(".\config"): raise Exception("Config dir not found")
             if not os.path.exists(".\config\configurations.xml"): raise Exception("configurations.xml not found")
             tree = ET.parse(".\config\configurations.xml")
             root = tree.getroot()
