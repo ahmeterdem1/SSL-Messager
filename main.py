@@ -561,14 +561,14 @@ def admin():
                 user = cmd[1]
                 mes = " ".join(cmd[2:])
                 try:
-                    object_list[user].write(bytes(f"RELAY {user} admin {mes}... \r\n", "utf-8"))
+                    object_list[user].write(bytes(f"RELAY {user} admin {mes} \r\n", "utf-8"))
                 except:
                     print(f"User: {user} unreachable")
             elif cmd[0] == "g":
                 mes = " ".join(cmd[1:])
                 for k, v in object_list.items():
                     try:
-                        v.write(bytes(f"RELAYG {k} admin {mes}... \r\n", "utf-8"))
+                        v.write(bytes(f"RELAYG admin {mes} \r\n", "utf-8"))
                     except:
                         pass
             elif cmd[0] == "s":

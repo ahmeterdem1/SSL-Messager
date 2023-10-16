@@ -218,7 +218,7 @@ class Widget(QWidget):
 
 
         self.quit_button_group = QPushButton("Quit")
-        self.quit_button_group.setStyleSheet(self.send_setting + " color: black;")
+        self.quit_button_group.setStyleSheet("background: red; color: black; border-radius: 3px; height: 20px; width: 50px;")
         self.quit_button_group.clicked.connect(self.quit)
 
         self.online_button_group = QPushButton("Online")
